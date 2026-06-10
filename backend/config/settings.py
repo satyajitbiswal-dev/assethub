@@ -9,6 +9,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 DJANGO_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -18,6 +19,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -66,6 +68,24 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                (
+                    config("REDIS_HOST", default="localhost"),
+                    config("REDIS_PORT", default=6379, cast=int),
+                )
+            ],
+        },
+    },
+}
+
+NOTIFICATION_RETENTION_DAYS = config("NOTIFICATION_RETENTION_DAYS", default=30, cast=int)
+NOTIFICATION_MAX_PER_USER = config("NOTIFICATION_MAX_PER_USER", default=100, cast=int)
 
 DATABASES = {
     "default": {

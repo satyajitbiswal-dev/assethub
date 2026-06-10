@@ -2,7 +2,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import serializers
+
 from .models import Notification
+from .utils import broadcast_to_user, serialize_notification, unread_count_for
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -33,13 +35,44 @@ def mark_read(request, pk):
         n = Notification.objects.get(pk=pk, recipient=request.user)
         n.is_read = True
         n.save()
-        return Response({"success": True})
+        unread = unread_count_for(request.user)
+        broadcast_to_user(
+            request.user.id,
+            {
+                "type": "notification.read",
+                "notification_id": str(n.id),
+                "unread_count": unread,
+            },
+        )
+        return Response({"success": True, "unread_count": unread})
     except Notification.DoesNotExist:
-        return Response({"success": False, "message": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"success": False, "message": "Not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 
 @api_view(["PATCH"])
 @permission_classes([permissions.IsAuthenticated])
 def mark_all_read(request):
-    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
-    return Response({"success": True, "message": "All notifications marked as read."})
+    Notification.objects.filter(recipient=request.user, is_read=False).update(
+        is_read=True
+    )
+    broadcast_to_user(
+        request.user.id,
+        {"type": "notifications.read_all", "unread_count": 0},
+    )
+    return Response(
+        {"success": True, "message": "All notifications marked as read.", "unread_count": 0}
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([permissions.IsAuthenticated])
+def clear_all(request):
+    Notification.objects.filter(recipient=request.user).delete()
+    broadcast_to_user(
+        request.user.id,
+        {"type": "notifications.cleared", "unread_count": 0},
+    )
+    return Response({"success": True, "message": "All notifications cleared."})

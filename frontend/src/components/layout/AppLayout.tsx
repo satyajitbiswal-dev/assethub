@@ -1,7 +1,10 @@
 import { Outlet } from 'react-router-dom'
+import { useNotificationSocket } from '@/features/notifications/useNotificationSocket'
 import Sidebar from './Sidebar'
 
 export default function AppLayout() {
+  useNotificationSocket()
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />

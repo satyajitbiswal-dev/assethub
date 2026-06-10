@@ -1,4 +1,12 @@
 services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:16-alpine
     environment:
@@ -18,15 +26,18 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py seed &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
       - ./backend:/app
       - media_files:/app/media
     env_file: ./backend/.env
     environment:
       DB_HOST: db
+      REDIS_HOST: redis
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     expose:
       - "8000"
