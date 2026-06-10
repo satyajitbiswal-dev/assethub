@@ -32,6 +32,9 @@ export const authApi = baseApi.injectEndpoints({
     changePassword: build.mutation<{ success: boolean }, { old_password: string; new_password: string }>({
       query: (body) => ({ url: '/auth/change-password/', method: 'POST', body }),
     }),
+    forgotPassword: build.mutation<{ success: boolean; message: string }, { email: string }>({
+      query: (body) => ({ url: '/auth/forgot-password/', method: 'POST', body }),
+    }),
     logout: build.mutation<void, { refresh: string }>({
       query: (body) => ({ url: '/auth/logout/', method: 'POST', body }),
     }),
@@ -44,5 +47,6 @@ export const {
   useGetMeQuery,
   useUpdateMeMutation,
   useChangePasswordMutation,
+  useForgotPasswordMutation,
   useLogoutMutation,
 } = authApi

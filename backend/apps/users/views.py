@@ -1,3 +1,9 @@
+import random
+import string
+
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
 from django.db.models import Q
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
@@ -68,6 +74,71 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save()
         return Response({"success": True, "message": "Password updated."})
+
+
+class ForgotPasswordView(APIView):
+    """
+    POST /api/auth/forgot-password/
+    Accepts { "email": "..." }.
+    Generates a temporary password (first 5 chars of email prefix + 5 random
+    alphanumeric chars), sets it on the account, and emails it to the user.
+    Always returns a generic success message so valid emails cannot be enumerated.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email", "").strip().lower()
+        if not email:
+            return Response(
+                {"success": False, "message": "Email is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        GENERIC_OK = {
+            "success": True,
+            "message": "If that email is registered, you'll receive a temporary password shortly.",
+        }
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Return the same response regardless — don't reveal whether the email exists
+            return Response(GENERIC_OK)
+
+        # Build temp password: e.g. alice + xK3mP  →  alicexK3mP
+        email_prefix = email.split("@")[0][:5]
+        random_suffix = "".join(
+            random.choices(string.ascii_letters + string.digits, k=5)
+        )
+        temp_password = email_prefix + random_suffix
+
+        user.set_password(temp_password)
+        user.save(update_fields=["password"])
+
+        try:
+            send_mail(
+                subject="[AssetHub] Your temporary password",
+                message=(
+                    f"Hi {user.first_name or user.email},\n\n"
+                    f"Your temporary password is:\n\n"
+                    f"    {temp_password}\n\n"
+                    f"Use it to sign in at AssetHub. You can keep using it as long as you like —"
+                    f" there's no requirement to change it.\n\n"
+                    f"If you'd like to set your own password, go to Profile → Change Password"
+                    f" after signing in.\n\n"
+                    f"If you didn't request this, you can safely ignore this email.\n\n"
+                    f"— The AssetHub team"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            # Email failure is swallowed intentionally — the password is still reset.
+            # In production wire this to a proper logger / alerting system.
+            pass
+
+        return Response(GENERIC_OK)
 
 
 class UserListView(generics.ListAPIView):

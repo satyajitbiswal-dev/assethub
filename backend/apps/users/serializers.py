@@ -74,3 +74,21 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Current password is incorrect.")
         return value
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+ 
+    def validate_email(self, value):
+        # Don't reveal whether the email exists — handled in the view
+        return value.lower().strip()
+ 
+ 
+class SetNewPasswordSerializer(serializers.Serializer):
+    """Used after login when must_change_password=True."""
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, label="Confirm Password")
+ 
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password2": "Passwords do not match."})
+        return attrs

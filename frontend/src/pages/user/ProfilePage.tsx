@@ -10,7 +10,9 @@ import {
   useChangePasswordMutation,
 } from '@/features/auth/authApi'
 import toast from 'react-hot-toast'
-import { User, Lock, Eye, EyeOff, X, KeyRound } from 'lucide-react'
+import { User, Lock, Eye, EyeOff, X, KeyRound, Info } from 'lucide-react'
+
+const TEMP_PW_KEY = 'assethub_used_temp_pw'
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors'
@@ -89,7 +91,7 @@ const pwSchema = z
   })
 type PwData = z.infer<typeof pwSchema>
 
-function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
+function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [changePassword, { isLoading }] = useChangePasswordMutation()
   const {
     register,
@@ -104,6 +106,7 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
         new_password: data.new_password,
       }).unwrap()
       toast.success('Your password has been updated successfully')
+      onSuccess()
       onClose()
     } catch (err: unknown) {
       const msg =
@@ -187,6 +190,22 @@ export default function ProfilePage() {
   const [updateMe, { isLoading: saving }] = useUpdateMeMutation()
   const [showPwDialog, setShowPwDialog] = useState(false)
 
+  // Show the soft banner only when the user arrived via a temp password flow.
+  // LoginPage sets this flag in localStorage; we clear it once they change their password.
+  const [showTempBanner, setShowTempBanner] = useState(
+    () => localStorage.getItem(TEMP_PW_KEY) === 'true'
+  )
+
+  const dismissBanner = () => {
+    localStorage.removeItem(TEMP_PW_KEY)
+    setShowTempBanner(false)
+  }
+
+  const handlePasswordChanged = () => {
+    localStorage.removeItem(TEMP_PW_KEY)
+    setShowTempBanner(false)
+  }
+
   const {
     register,
     handleSubmit,
@@ -251,7 +270,12 @@ export default function ProfilePage() {
 
   return (
     <>
-      {showPwDialog && <ChangePasswordDialog onClose={() => setShowPwDialog(false)} />}
+      {showPwDialog && (
+        <ChangePasswordDialog
+          onClose={() => setShowPwDialog(false)}
+          onSuccess={handlePasswordChanged}
+        />
+      )}
 
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -268,6 +292,24 @@ export default function ProfilePage() {
             Change Password
           </button>
         </div>
+
+        {/* Soft banner — only shown after a forgot-password login */}
+        {showTempBanner && (
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" />
+            <span className="flex-1 leading-relaxed">
+              You're signed in with a temporary password. You can set a personal one above — or keep
+              using it, it works just fine.
+            </span>
+            <button
+              onClick={dismissBanner}
+              className="text-blue-400 hover:text-blue-600 transition-colors flex-shrink-0"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
           <div className="px-8 pt-8 pb-6 border-b border-gray-100 flex items-center gap-4">
