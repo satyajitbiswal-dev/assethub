@@ -5,6 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  build: {
+    // Avoid clashing with the React route `/assets`
+    assetsDir: 'static',
+  },
   server: {
     port: 5173,
     proxy: {

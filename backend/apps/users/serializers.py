@@ -48,9 +48,21 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    enrollment_no = serializers.CharField(required=True, min_length=8, max_length=8)
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "enrollment_no", "phone", "department"]
+
+    def validate_enrollment_no(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Enrollment number must contain only digits.")
+        qs = User.objects.filter(enrollment_no=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("This enrollment number is already registered.")
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -92,7 +92,7 @@ export default function RegisterPage() {
     try {
       await register(data).unwrap()
       toast.success('Account created! Please sign in.')
-      navigate('/login')
+      navigate('/login', { replace: true })
     } catch (err: unknown) {
       toast.error(
         (err as { data?: { message?: string } })?.data?.message ?? 'Registration failed'

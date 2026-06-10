@@ -39,7 +39,7 @@ export default function Sidebar() {
   const handleLogout = async () => {
     if (refreshToken) await logoutApi({ refresh: refreshToken }).catch(() => {})
     dispatch(logout())
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -84,7 +84,7 @@ export default function Sidebar() {
       {/* User footer */}
       <div className="px-3 py-3 border-t border-gray-100">
         <Link
-          to="/profile"
+          to={isAdmin ? '/admin/profile' : '/profile'}
           className="block px-3 py-2 mb-1 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
         >
           <p className="text-xs font-medium text-gray-900 truncate">{user?.full_name}</p>

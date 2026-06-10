@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 
 import AppLayout        from '@/components/layout/AppLayout'
 import ProtectedRoute   from '@/components/shared/ProtectedRoute'
+import GuestRoute       from '@/components/shared/GuestRoute'
 
 import LoginPage        from '@/pages/LoginPage'
 import RegisterPage     from '@/pages/RegisterPage'
@@ -33,10 +34,13 @@ export default function App() {
         }}
       />
       <Routes>
-        {/* Public */}
-        <Route path="/login"    element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/"         element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Public — redirect to app if already logged in */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login"    element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
 
         {/* User routes */}
         <Route element={<ProtectedRoute />}>
@@ -59,6 +63,7 @@ export default function App() {
             <Route path="/admin/users"      element={<AdminUsersPage />} />
             <Route path="/admin/analytics"  element={<AdminAnalyticsPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
+            <Route path="/admin/profile"       element={<ProfilePage />} />
           </Route>
         </Route>
 

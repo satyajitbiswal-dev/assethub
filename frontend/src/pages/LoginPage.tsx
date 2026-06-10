@@ -25,7 +25,7 @@ export default function LoginPage() {
       const result = await login(data).unwrap()
       dispatch(setAuth({ user: result.user, access: result.access, refresh: result.refresh }))
       toast.success(`Welcome back, ${result.user.first_name || result.user.email}!`)
-      navigate(result.user.role === 'admin' ? '/admin/dashboard' : '/dashboard')
+      navigate(result.user.role === 'admin' ? '/admin/dashboard' : '/dashboard', { replace: true })
     } catch (err: unknown) {
       const msg = (err as { data?: { message?: string } })?.data?.message ?? 'Invalid credentials'
       toast.error(msg)

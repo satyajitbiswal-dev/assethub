@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,7 +12,6 @@ import {
 import toast from 'react-hot-toast'
 import { User, Lock, Eye, EyeOff, X, KeyRound } from 'lucide-react'
 
-/* ─────────────── shared ─────────────── */
 const inputCls =
   'w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors'
 
@@ -69,7 +68,6 @@ function PasswordField({
   )
 }
 
-/* ─────────────── Profile form ─────────────── */
 const profileSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
@@ -79,7 +77,6 @@ const profileSchema = z.object({
 })
 type ProfileData = z.infer<typeof profileSchema>
 
-/* ─────────────── Change-password dialog ─────────────── */
 const pwSchema = z
   .object({
     old_password: z.string().min(1, 'Old password is required'),
@@ -120,10 +117,8 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    /* backdrop */
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6 relative">
-        {/* close */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -186,7 +181,6 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-/* ─────────────── Main page ─────────────── */
 export default function ProfilePage() {
   const dispatch = useAppDispatch()
   const { data: me, isLoading: meLoading } = useGetMeQuery()
@@ -198,43 +192,56 @@ export default function ProfilePage() {
     handleSubmit,
     formState: { errors },
     reset,
+    setError,
   } = useForm<ProfileData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      first_name: me?.first_name ?? '',
-      last_name: me?.last_name ?? '',
-      enrollment_no: me?.enrollment_no ?? '',
-      phone: me?.phone ?? '',
-      department: me?.department ?? '',
+      first_name: '',
+      last_name: '',
+      enrollment_no: '',
+      phone: '',
+      department: '',
     },
   })
 
-  /* Re-populate form when data arrives */
-  const [seeded, setSeeded] = useState(false)
-  if (me && !seeded) {
+  useEffect(() => {
+    if (!me) return
     reset({
-      first_name: me.first_name,
-      last_name: me.last_name,
-      enrollment_no: me.enrollment_no,
-      phone: me.phone,
-      department: me.department,
+      first_name: me.first_name ?? '',
+      last_name: me.last_name ?? '',
+      enrollment_no: me.enrollment_no ?? '',
+      phone: me.phone ?? '',
+      department: me.department ?? '',
     })
-    setSeeded(true)
-  }
+  }, [me, reset])
 
   const onSubmit = async (data: ProfileData) => {
     try {
       const updated = await updateMe(data).unwrap()
       dispatch(updateUser(updated))
+      reset({
+        first_name: updated.first_name ?? '',
+        last_name: updated.last_name ?? '',
+        enrollment_no: updated.enrollment_no ?? '',
+        phone: updated.phone ?? '',
+        department: updated.department ?? '',
+      })
       toast.success('Profile updated successfully')
     } catch (err: unknown) {
+      const body = (err as { data?: Record<string, string[] | string> })?.data
+      if (body?.enrollment_no) {
+        const msg = Array.isArray(body.enrollment_no) ? body.enrollment_no[0] : body.enrollment_no
+        setError('enrollment_no', { message: msg })
+      }
       toast.error(
-        (err as { data?: { detail?: string } })?.data?.detail ?? 'Failed to update profile'
+        (Array.isArray(body?.enrollment_no) ? body.enrollment_no[0] : null) ??
+          (typeof body?.detail === 'string' ? body.detail : null) ??
+          'Failed to update profile',
       )
     }
   }
 
-  if (meLoading) {
+  if (meLoading && !me) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -246,8 +253,7 @@ export default function ProfilePage() {
     <>
       {showPwDialog && <ChangePasswordDialog onClose={() => setShowPwDialog(false)} />}
 
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {/* Header */}
+      <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
@@ -263,9 +269,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* Profile card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-          {/* Avatar banner */}
           <div className="px-8 pt-8 pb-6 border-b border-gray-100 flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="w-7 h-7 text-primary" />
@@ -279,7 +283,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="px-8 py-6 space-y-5">
             <Field label="Enrollment Number" error={errors.enrollment_no?.message} required>
               <input
@@ -317,7 +320,6 @@ export default function ProfilePage() {
               />
             </Field>
 
-            {/* Read-only info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>

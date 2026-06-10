@@ -18,7 +18,16 @@ export const authApi = baseApi.injectEndpoints({
     }),
     updateMe: build.mutation<User, Partial<User>>({
       query: (body) => ({ url: '/auth/me/', method: 'PATCH', body }),
-      invalidatesTags: ['User'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(
+            authApi.util.updateQueryData('getMe', undefined, () => data),
+          )
+        } catch {
+          /* handled by caller */
+        }
+      },
     }),
     changePassword: build.mutation<{ success: boolean }, { old_password: string; new_password: string }>({
       query: (body) => ({ url: '/auth/change-password/', method: 'POST', body }),

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   useGetNotificationsQuery,
   useMarkReadMutation,
@@ -7,19 +8,88 @@ import {
 import PageHeader from '@/components/shared/PageHeader'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import EmptyState from '@/components/shared/EmptyState'
-import { Bell, CheckCheck, Trash2 } from 'lucide-react'
+import { Bell, CheckCheck, Trash2, X } from 'lucide-react'
 import { formatDateTime, cn } from '@/lib/utils'
+
+function ClearAllDialog({
+  count,
+  onConfirm,
+  onCancel,
+  isLoading,
+}: {
+  count: number
+  onConfirm: () => void
+  onCancel: () => void
+  isLoading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-6 relative">
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <Trash2 className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Clear all notifications?</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              This will permanently delete {count} notification{count === 1 ? '' : 's'}.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
+          >
+            {isLoading ? 'Clearing…' : 'Clear all'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function NotificationsPage() {
   const { data, isLoading } = useGetNotificationsQuery()
   const [markRead] = useMarkReadMutation()
   const [markAllRead] = useMarkAllReadMutation()
-  const [clearAll] = useClearAllMutation()
+  const [clearAll, { isLoading: clearing }] = useClearAllMutation()
+  const [showClearDialog, setShowClearDialog] = useState(false)
 
   const hasNotifications = (data?.results.length ?? 0) > 0
+  const totalCount = data?.results.length ?? 0
+
+  const handleClearAll = async () => {
+    await clearAll().unwrap()
+    setShowClearDialog(false)
+  }
 
   return (
     <div>
+      {showClearDialog && (
+        <ClearAllDialog
+          count={totalCount}
+          onConfirm={handleClearAll}
+          onCancel={() => setShowClearDialog(false)}
+          isLoading={clearing}
+        />
+      )}
+
       <PageHeader
         title="Notifications"
         action={hasNotifications ? (
@@ -33,7 +103,7 @@ export default function NotificationsPage() {
               </button>
             ) : null}
             <button
-              onClick={() => clearAll()}
+              onClick={() => setShowClearDialog(true)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <Trash2 className="w-4 h-4" /> Clear all
