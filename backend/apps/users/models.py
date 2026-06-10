@@ -29,6 +29,7 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, blank=True)
+    enrollment_no = models.CharField(max_length=8, unique=True, blank=True, default='')
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER)
     phone = models.CharField(max_length=15, blank=True)
     department = models.CharField(max_length=100, blank=True)

@@ -1,3 +1,4 @@
 # Root ignores
 .DS_Store
 *.log
+*.txt

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, BookOpen, Bell,
   LogOut, Shield, BarChart2, QrCode, ScanLine,
@@ -83,14 +83,17 @@ export default function Sidebar() {
 
       {/* User footer */}
       <div className="px-3 py-3 border-t border-gray-100">
-        <div className="px-3 py-2 mb-1 rounded-lg bg-gray-50">
+        <Link
+          to="/profile"
+          className="block px-3 py-2 mb-1 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
           <p className="text-xs font-medium text-gray-900 truncate">{user?.full_name}</p>
           <p className="text-[11px] text-gray-400 truncate mt-0.5">{user?.email}</p>
           <span className={cn(
             'inline-block mt-1.5 text-[10px] px-2 py-0.5 rounded-full font-medium',
             isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-primary-light text-primary-dark',
           )}>{user?.role}</span>
-        </div>
+        </Link>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"

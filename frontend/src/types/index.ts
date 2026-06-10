@@ -1,5 +1,6 @@
 export interface User {
-  id: string; email: string; first_name: string; last_name: string
+  id: string; email: string; enrollment_no: string
+  first_name: string; last_name: string
   full_name: string; role: 'admin' | 'user'; phone: string
   department: string; is_active: boolean; created_at: string
 }
