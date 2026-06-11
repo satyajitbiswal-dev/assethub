@@ -49,6 +49,8 @@ function PasswordField({
   required?: boolean
 }) {
   const [show, setShow] = useState(false)
+  // label / error / required are destructured above, so ...inputProps is clean
+  // and will NOT forward those props to <input>
   return (
     <Field label={label} error={error} required={required}>
       <div className="relative">

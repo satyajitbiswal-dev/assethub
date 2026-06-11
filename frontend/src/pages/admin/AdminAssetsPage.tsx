@@ -3,7 +3,8 @@ import { useGetAssetsQuery, useCreateAssetMutation, useUpdateAssetMutation, useD
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
-import { Plus, Pencil, Trash2, Search, X, MessageSquare } from 'lucide-react'
+import AssetInfoModal from '@/components/shared/AssetInfoModal'
+import { Plus, Pencil, Trash2, Search, X, MessageSquare, Info } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Asset } from '@/types'
 import toast from 'react-hot-toast'
@@ -108,6 +109,7 @@ export default function AdminAssetsPage() {
 
   const { data: reviewSummary } = useGetReviewSummaryQuery()
   const [reviewsAsset, setReviewsAsset] = useState<{ id: string; name: string } | null>(null)
+  const [infoAsset, setInfoAsset] = useState<Asset | null>(null)
 
   // Map asset id → { review_count, unseen_count }
   const reviewMap = new Map(
@@ -163,6 +165,14 @@ export default function AdminAssetsPage() {
                     <td className="px-4 py-3 text-gray-500 text-xs">{asset.location || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {/* Info / QR button */}
+                        <button
+                          onClick={() => setInfoAsset(asset)}
+                          className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg"
+                          title="Asset info & QR code"
+                        >
+                          <Info className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => setModalAsset(asset)}
                           className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
@@ -215,6 +225,13 @@ export default function AdminAssetsPage() {
           assetId={reviewsAsset.id}
           assetName={reviewsAsset.name}
           onClose={() => setReviewsAsset(null)}
+        />
+      )}
+      {infoAsset && (
+        <AssetInfoModal
+          asset={infoAsset}
+          onClose={() => setInfoAsset(null)}
+          showQr={true}
         />
       )}
     </div>

@@ -5,10 +5,11 @@ import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import EmptyState from '@/components/shared/EmptyState'
+import AssetInfoModal from '@/components/shared/AssetInfoModal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Package, Search, Filter, X, QrCode } from 'lucide-react'
+import { Package, Search, X, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Asset } from '@/types'
 import toast from 'react-hot-toast'
@@ -89,6 +90,7 @@ export default function AssetsPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [infoAsset, setInfoAsset] = useState<Asset | null>(null)
 
   const { data: assetsData, isLoading } = useGetAssetsQuery({ search, category: categoryFilter, status: statusFilter })
   const { data: categoriesData } = useGetCategoriesQuery()
@@ -131,7 +133,17 @@ export default function AssetsPage() {
                   <h3 className="text-sm font-semibold text-gray-900 truncate">{asset.name}</h3>
                   <p className="text-xs text-gray-500 mt-0.5">{asset.category_name}</p>
                 </div>
-                <StatusBadge status={asset.status} />
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                  <StatusBadge status={asset.status} />
+                  {/* Info button */}
+                  <button
+                    onClick={() => setInfoAsset(asset)}
+                    className="p-1 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    title="Asset details"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               {asset.location && <p className="text-xs text-gray-400 mb-3">📍 {asset.location}</p>}
               <div className="flex items-center justify-between mb-4">
@@ -161,6 +173,7 @@ export default function AssetsPage() {
       )}
 
       {selectedAsset && <BookingModal asset={selectedAsset} onClose={() => setSelectedAsset(null)} />}
+      {infoAsset && <AssetInfoModal asset={infoAsset} onClose={() => setInfoAsset(null)} showQr={false} />}
     </div>
   )
 }

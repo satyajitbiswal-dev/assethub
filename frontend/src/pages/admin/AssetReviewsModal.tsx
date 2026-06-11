@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useGetReviewsByAssetQuery } from '@/features/reviews/reviewApi'
-import { X, ChevronDown, ChevronUp, Star } from 'lucide-react'
+import { useGetReviewsByAssetQuery, useClearAssetReviewsMutation } from '@/features/reviews/reviewApi'
+import { X, ChevronDown, ChevronUp, Star, Trash2, AlertTriangle } from 'lucide-react'
 import { formatDateTime, cn } from '@/lib/utils'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import toast from 'react-hot-toast'
 
 interface Props {
   assetId: string
@@ -30,7 +31,9 @@ function StarDisplay({ rating }: { rating: number }) {
 export default function AssetReviewsModal({ assetId, assetName, onClose }: Props) {
   // Fetching marks all reviews as seen on the backend
   const { data: reviews, isLoading } = useGetReviewsByAssetQuery(assetId)
+  const [clearAssetReviews, { isLoading: clearing }] = useClearAssetReviewsMutation()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const count = reviews?.length ?? 0
   const hasExpanded = expandedId !== null
@@ -39,6 +42,16 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
     count > 0
       ? (reviews!.reduce((sum, r) => sum + (r.rating ?? 0), 0) / count).toFixed(1)
       : null
+
+  const handleClearAll = async () => {
+    try {
+      await clearAssetReviews(assetId).unwrap()
+      toast.success(`All reviews for "${assetName}" have been cleared`)
+      onClose()
+    } catch {
+      toast.error('Failed to clear reviews')
+    }
+  }
 
   return (
     <div
@@ -49,6 +62,7 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
         className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Reviews</h2>
@@ -73,6 +87,15 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
                 Collapse all
               </button>
             )}
+            {count > 0 && !confirmClear && (
+              <button
+                onClick={() => setConfirmClear(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear all
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -82,6 +105,33 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
           </div>
         </div>
 
+        {/* Confirmation banner */}
+        {confirmClear && (
+          <div className="mx-4 mt-3 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800">Delete all {count} reviews?</p>
+              <p className="text-xs text-red-600 mt-0.5">This cannot be undone.</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="px-3 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="px-3 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {clearing ? 'Deleting…' : 'Delete all'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Review list */}
         <div className="overflow-y-auto px-4 py-2 flex-1">
           {isLoading ? (
             <LoadingSpinner />

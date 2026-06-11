@@ -30,15 +30,29 @@ export const reviewsApi = baseApi.injectEndpoints({
     }),
     getReviewSummary: build.query<AssetReviewSummary[], void>({
       query: () => '/bookings/reviews/summary/',
-      providesTags: ['Review'],
+      providesTags: ['ReviewSummary'],
     }),
     getReviewsByAsset: build.query<Review[], string>({
       query: (assetId) => `/bookings/reviews/by-asset/${assetId}/`,
       providesTags: (_r, _e, assetId) => [{ type: 'Review', id: `asset-${assetId}` }],
+      // After the admin fetches reviews (backend marks them seen), invalidate the
+      // summary so the green dot count refreshes automatically.
+      async onQueryStarted(_assetId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          dispatch(reviewsApi.util.invalidateTags(['ReviewSummary']))
+        } catch {
+          /* ignore */
+        }
+      },
     }),
     clearMyReviews: build.mutation<{ success: boolean; deleted: number }, void>({
       query: () => ({ url: '/bookings/reviews/clear-mine/', method: 'DELETE' }),
       invalidatesTags: ['Review'],
+    }),
+    clearAssetReviews: build.mutation<{ success: boolean; deleted: number }, string>({
+      query: (assetId) => ({ url: `/bookings/reviews/by-asset/${assetId}/clear/`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, assetId) => ['ReviewSummary', { type: 'Review', id: `asset-${assetId}` }],
     }),
   }),
 })
@@ -49,4 +63,5 @@ export const {
   useGetReviewSummaryQuery,
   useGetReviewsByAssetQuery,
   useClearMyReviewsMutation,
+  useClearAssetReviewsMutation,
 } = reviewsApi
