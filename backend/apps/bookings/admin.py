@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Booking, AuditLog
+from .models import Booking, AuditLog, Review
 
 
 @admin.register(Booking)
@@ -15,3 +15,9 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ["actor", "action", "target_type", "target_id", "created_at"]
     list_filter = ["action", "target_type"]
     readonly_fields = ["actor", "action", "target_type", "target_id", "metadata", "created_at"]
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ["user", "asset", "text", "created_at"]
+    search_fields = ["user__email", "asset__name", "text"]

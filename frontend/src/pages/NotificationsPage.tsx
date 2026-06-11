@@ -80,7 +80,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div>
+    <div  className={showClearDialog ? 'relative' : undefined}>
       {showClearDialog && (
         <ClearAllDialog
           count={totalCount}
@@ -89,7 +89,7 @@ export default function NotificationsPage() {
           isLoading={clearing}
         />
       )}
-
+      <div className={showClearDialog ? 'blur-sm pointer-events-none select-none transition-all' : 'transition-all'}>
       <PageHeader
         title="Notifications"
         action={hasNotifications ? (
@@ -111,6 +111,7 @@ export default function NotificationsPage() {
           </div>
         ) : undefined}
       />
+    </div>
       {isLoading ? (
         <LoadingSpinner />
       ) : !hasNotifications ? (

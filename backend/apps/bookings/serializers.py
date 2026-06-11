@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Booking, AuditLog
+from .models import Booking, AuditLog, Review
 from apps.assets.serializers import AssetListSerializer
 from apps.users.serializers import UserSerializer
 
@@ -64,3 +64,41 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = ["id", "actor", "actor_name", "action", "target_type", "target_id", "metadata", "created_at"]
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user_detail = UserSerializer(source="user", read_only=True)
+    asset_name = serializers.CharField(source="asset.name", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ["id", "booking", "user", "user_detail", "asset", "asset_name", "text", "created_at"]
+        read_only_fields = ["id", "user", "asset", "created_at"]
+
+    def validate_text(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Review cannot be empty.")
+        if len(value.split()) > 30:
+            raise serializers.ValidationError("Review must be 30 words or fewer.")
+        return value
+
+    def validate_booking(self, booking):
+        request = self.context["request"]
+        if booking.user_id != request.user.id:
+            raise serializers.ValidationError("You can only review your own bookings.")
+        if booking.status != Booking.Status.RETURNED:
+            raise serializers.ValidationError("You can only review returned bookings.")
+        if hasattr(booking, "review"):
+            raise serializers.ValidationError("You have already reviewed this booking.")
+        return booking
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        booking = validated_data["booking"]
+        return Review.objects.create(
+            booking=booking,
+            user=request.user,
+            asset=booking.asset,
+            text=validated_data["text"],
+        )

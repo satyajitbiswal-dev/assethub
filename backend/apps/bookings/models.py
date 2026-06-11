@@ -80,3 +80,20 @@ class AuditLog(models.Model):
             target_id=str(target.pk),
             metadata=metadata or {},
         )
+
+
+class Review(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name="review")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews")
+    asset = models.ForeignKey("assets.Asset", on_delete=models.CASCADE, related_name="reviews")
+    text = models.CharField(max_length=200)
+    rating = models.PositiveSmallIntegerField(default=5)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "reviews"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} → {self.asset.name}"

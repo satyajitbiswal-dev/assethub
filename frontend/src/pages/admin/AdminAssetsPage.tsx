@@ -3,10 +3,12 @@ import { useGetAssetsQuery, useCreateAssetMutation, useUpdateAssetMutation, useD
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, MessageSquare } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Asset } from '@/types'
 import toast from 'react-hot-toast'
+import { useGetReviewSummaryQuery } from '@/features/reviews/reviewApi'
+import AssetReviewsModal from '@/pages/admin/AssetReviewsModal'
 
 const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
 
@@ -15,6 +17,8 @@ function AssetModal({ asset, onClose }: { asset?: Asset; onClose: () => void }) 
   const [update, { isLoading: updating }] = useUpdateAssetMutation()
   const { data: cats } = useGetCategoriesQuery()
   const isLoading = creating || updating
+
+  
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: asset ? {
@@ -103,6 +107,10 @@ export default function AdminAssetsPage() {
   const { data, isLoading } = useGetAssetsQuery({ search })
   const [deleteAsset] = useDeleteAssetMutation()
 
+  const { data: reviewSummary } = useGetReviewSummaryQuery()
+  const [reviewsAsset, setReviewsAsset] = useState<{ id: string; name: string } | null>(null)
+  const reviewByAssetId = new Map((reviewSummary ?? []).map((a) => [a.id, a.review_count]))
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return
     try { await deleteAsset(id).unwrap(); toast.success('Asset deleted') }
@@ -149,6 +157,20 @@ export default function AdminAssetsPage() {
                     <div className="flex items-center gap-1">
                       <button onClick={() => setModalAsset(asset)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
                       <button onClick={() => handleDelete(asset.id, asset.name)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button
+                        onClick={() => setReviewsAsset({ id: asset.id, name: asset.name })}
+                        className="group relative p-1.5 rounded-lg transition-colors text-gray-400 hover:text-primary hover:bg-primary-light"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        {(reviewByAssetId.get(asset.id) ?? 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9px] font-semibold flex items-center justify-center">
+                            {reviewByAssetId.get(asset.id)}
+                          </span>
+                        )}
+                        <span className="absolute bottom-full right-0 mb-1 whitespace-nowrap bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          Reviews
+                        </span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -158,6 +180,13 @@ export default function AdminAssetsPage() {
         </div>
       )}
       {modalAsset !== undefined && <AssetModal asset={modalAsset ?? undefined} onClose={() => setModalAsset(undefined)} />}
+      {reviewsAsset && (
+        <AssetReviewsModal
+          assetId={reviewsAsset.id}
+          assetName={reviewsAsset.name}
+          onClose={() => setReviewsAsset(null)}
+        />
+      )}
     </div>
   )
 }

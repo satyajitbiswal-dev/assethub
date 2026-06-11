@@ -3,10 +3,11 @@ from django.db import transaction
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Booking, AuditLog
-from .serializers import BookingSerializer, BookingCreateSerializer, RejectSerializer, AuditLogSerializer
+from .models import Booking, AuditLog, Review
+from .serializers import BookingSerializer, BookingCreateSerializer, RejectSerializer, AuditLogSerializer, ReviewSerializer
 from apps.core.permissions import IsAdminUser, IsOwnerOrAdmin
 from apps.notifications.utils import notify_user
+from django.db.models import Count
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -165,3 +166,41 @@ class AuditLogListView(generics.ListAPIView):
     serializer_class = AuditLogSerializer
     permission_classes = [IsAdminUser]
     queryset = AuditLog.objects.select_related("actor").all()
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    http_method_names = ["get", "post", "head", "options"]
+    pagination_class = None
+
+    def get_permissions(self):
+        if self.action in ("by_asset", "summary"):
+            return [IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Review.objects.select_related("user", "asset")
+        if user.role != "admin":
+            qs = qs.filter(user=user)
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="by-asset/(?P<asset_id>[^/.]+)")
+    def by_asset(self, request, asset_id=None):
+        qs = Review.objects.filter(asset__id=asset_id).select_related("user", "asset")
+        return Response(ReviewSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        """Admin: list of assets that have at least one review, with counts."""
+        from apps.assets.models import Asset
+        assets = (
+            Asset.objects.filter(reviews__isnull=False)
+            .distinct()
+            .annotate(review_count=Count("reviews"))
+        )
+        data = [
+            {"id": str(a.id), "name": a.name, "category_name": a.category.name, "review_count": a.review_count}
+            for a in assets
+        ]
+        return Response(data)

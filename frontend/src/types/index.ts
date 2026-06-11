@@ -59,3 +59,12 @@ export interface AuditLog {
 export interface PaginatedResponse<T> {
   count: number; next: string | null; previous: string | null; results: T[]
 }
+
+
+export interface Review {
+  id: string; booking: string; user: string; user_detail: User
+  asset: string; asset_name: string; text: string; created_at: string
+}
+export interface AssetReviewSummary {
+  id: string; name: string; category_name: string; review_count: number
+}
