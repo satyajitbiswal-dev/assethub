@@ -1,21 +1,14 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Package, BookOpen, Bell,
-  LogOut, Shield, BarChart2, ScanLine, MessageSquarePlus, Mail, Phone,
+  LogOut, Shield, BarChart2, ScanLine, MessageSquarePlus, Mail, Phone, Star,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
 import { useLogoutMutation } from '@/features/auth/authApi'
 import { useGetNotificationsQuery } from '@/features/notifications/notificationsApi'
+import { useGetMyReviewsQuery } from '@/features/reviews/reviewApi'
+import { useGetBookingsQuery } from '@/features/bookings/bookingsApi'
 import { cn } from '@/lib/utils'
-
-const userLinks = [
-  { to: '/dashboard',     icon: LayoutDashboard,    label: 'Dashboard' },
-  { to: '/assets',        icon: Package,            label: 'Assets' },
-  { to: '/my-bookings',   icon: BookOpen,           label: 'My Bookings' },
-  { to: '/scan',          icon: ScanLine,           label: 'QR Scanner' },
-  { to: '/notifications', icon: Bell,               label: 'Notifications' },
-  { to: '/feedback',      icon: MessageSquarePlus,  label: 'Feedback' },
-]
 
 const adminLinks = [
   { to: '/admin/dashboard',  icon: LayoutDashboard,   label: 'Dashboard' },
@@ -34,9 +27,29 @@ export default function Sidebar() {
   const { user, refreshToken } = useAppSelector((s) => s.auth)
   const [logoutApi] = useLogoutMutation()
   const { data: notifs } = useGetNotificationsQuery()
+  const { data: myReviews } = useGetMyReviewsQuery()
+  const { data: returnedBookings } = useGetBookingsQuery({ status: 'returned' })
+
   const unread  = notifs?.unread_count ?? 0
   const isAdmin = user?.role === 'admin'
-  const links   = isAdmin ? adminLinks : userLinks
+
+  // Count returned bookings without a review (pending reviews badge)
+  const reviewedBookingIds = new Set((myReviews ?? []).map((r) => r.booking))
+  const pendingReviewCount = (returnedBookings?.results ?? []).filter(
+    (b) => !reviewedBookingIds.has(b.id)
+  ).length
+
+  const userLinks = [
+    { to: '/dashboard',     icon: LayoutDashboard,    label: 'Dashboard',     badge: 0 },
+    { to: '/assets',        icon: Package,            label: 'Assets',        badge: 0 },
+    { to: '/my-bookings',   icon: BookOpen,           label: 'My Bookings',   badge: 0 },
+    { to: '/reviews',       icon: Star,               label: 'My Reviews',    badge: pendingReviewCount },
+    { to: '/scan',          icon: ScanLine,           label: 'QR Scanner',    badge: 0 },
+    { to: '/notifications', icon: Bell,               label: 'Notifications', badge: unread },
+    { to: '/feedback',      icon: MessageSquarePlus,  label: 'Feedback',      badge: 0 },
+  ]
+
+  const links = isAdmin ? adminLinks : userLinks
 
   const handleLogout = async () => {
     if (refreshToken) await logoutApi({ refresh: refreshToken }).catch(() => {})
@@ -61,26 +74,48 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {links.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) => cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-              isActive
-                ? 'bg-primary-light text-primary-dark font-medium'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-            )}
-          >
-            <Icon className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">{label}</span>
-            {label === 'Notifications' && unread > 0 && (
-              <span className="bg-primary text-white text-[10px] font-semibold rounded-full w-4.5 h-4.5 flex items-center justify-center min-w-[18px] px-1">
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
-          </NavLink>
-        ))}
+        {isAdmin
+          ? adminLinks.map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) => cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                  isActive
+                    ? 'bg-primary-light text-primary-dark font-medium'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                )}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1">{label}</span>
+                {label === 'Notifications' && unread > 0 && (
+                  <span className="bg-primary text-white text-[10px] font-semibold rounded-full min-w-[18px] px-1 h-[18px] flex items-center justify-center">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </NavLink>
+            ))
+          : userLinks.map(({ to, icon: Icon, label, badge }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) => cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                  isActive
+                    ? 'bg-primary-light text-primary-dark font-medium'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                )}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1">{label}</span>
+                {badge > 0 && (
+                  <span className="bg-primary text-white text-[10px] font-semibold rounded-full min-w-[18px] px-1 h-[18px] flex items-center justify-center">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </NavLink>
+            ))
+        }
       </nav>
 
       {/* Contact Us */}

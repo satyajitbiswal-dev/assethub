@@ -69,12 +69,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     user_detail = UserSerializer(source="user", read_only=True)
     asset_name = serializers.CharField(source="asset.name", read_only=True)
-
+ 
     class Meta:
         model = Review
-        fields = ["id", "booking", "user", "user_detail", "asset", "asset_name", "text", "created_at"]
-        read_only_fields = ["id", "user", "asset", "created_at"]
-
+        fields = ["id", "booking", "user", "user_detail", "asset", "asset_name", "text", "rating", "is_seen", "created_at"]
+        read_only_fields = ["id", "user", "asset", "is_seen", "created_at"]
+ 
     def validate_text(self, value):
         value = value.strip()
         if not value:
@@ -82,7 +82,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         if len(value.split()) > 30:
             raise serializers.ValidationError("Review must be 30 words or fewer.")
         return value
-
+ 
+    def validate_rating(self, value):
+        if not (1 <= value <= 5):
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+ 
     def validate_booking(self, booking):
         request = self.context["request"]
         if booking.user_id != request.user.id:
@@ -92,7 +97,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         if hasattr(booking, "review"):
             raise serializers.ValidationError("You have already reviewed this booking.")
         return booking
-
+ 
     def create(self, validated_data):
         request = self.context["request"]
         booking = validated_data["booking"]
@@ -101,4 +106,6 @@ class ReviewSerializer(serializers.ModelSerializer):
             user=request.user,
             asset=booking.asset,
             text=validated_data["text"],
+            rating=validated_data.get("rating", 5),
         )
+ 

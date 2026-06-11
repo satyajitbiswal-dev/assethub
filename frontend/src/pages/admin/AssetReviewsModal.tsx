@@ -10,12 +10,35 @@ interface Props {
   onClose: () => void
 }
 
+function StarDisplay({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className={`w-3.5 h-3.5 ${
+            star <= rating
+              ? 'fill-amber-400 text-amber-400'
+              : 'fill-transparent text-gray-200'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
 export default function AssetReviewsModal({ assetId, assetName, onClose }: Props) {
+  // Fetching marks all reviews as seen on the backend
   const { data: reviews, isLoading } = useGetReviewsByAssetQuery(assetId)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const count = reviews?.length ?? 0
   const hasExpanded = expandedId !== null
+
+  const avgRating =
+    count > 0
+      ? (reviews!.reduce((sum, r) => sum + (r.rating ?? 0), 0) / count).toFixed(1)
+      : null
 
   return (
     <div
@@ -29,9 +52,17 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Reviews</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {assetName} · {count} review{count === 1 ? '' : 's'}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-gray-500">
+                {assetName} · {count} review{count === 1 ? '' : 's'}
+              </p>
+              {avgRating && (
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span className="text-xs font-medium text-gray-700">{avgRating}</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {hasExpanded && (
@@ -83,16 +114,21 @@ export default function AssetReviewsModal({ assetId, assetName, onClose }: Props
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {r.user_detail?.full_name}
                           </p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {r.user_detail?.enrollment_no} · {formatDateTime(r.created_at)}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-gray-400 truncate">
+                              {r.user_detail?.enrollment_no} · {formatDateTime(r.created_at)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <StarDisplay rating={r.rating ?? 5} />
+                        {isOpen ? (
+                          <ChevronUp className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
                     </button>
                     {isOpen && (
                       <div className="px-4 pb-4">

@@ -89,6 +89,7 @@ class Review(models.Model):
     asset = models.ForeignKey("assets.Asset", on_delete=models.CASCADE, related_name="reviews")
     text = models.CharField(max_length=200)
     rating = models.PositiveSmallIntegerField(default=5)
+    is_seen = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -96,4 +97,4 @@ class Review(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.user.email} → {self.asset.name}"
+        return f"{self.user.email} → {self.asset.name} ({self.rating}★)"

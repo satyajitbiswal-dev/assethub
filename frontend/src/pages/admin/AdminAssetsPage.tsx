@@ -9,6 +9,7 @@ import { Asset } from '@/types'
 import toast from 'react-hot-toast'
 import { useGetReviewSummaryQuery } from '@/features/reviews/reviewApi'
 import AssetReviewsModal from '@/pages/admin/AssetReviewsModal'
+import { cn } from '@/lib/utils'
 
 const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
 
@@ -18,9 +19,7 @@ function AssetModal({ asset, onClose }: { asset?: Asset; onClose: () => void }) 
   const { data: cats } = useGetCategoriesQuery()
   const isLoading = creating || updating
 
-  
-
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit } = useForm({
     defaultValues: asset ? {
       name: asset.name, category: asset.category, description: asset.description,
       total_qty: asset.total_qty, status: asset.status, condition: asset.condition,
@@ -109,7 +108,11 @@ export default function AdminAssetsPage() {
 
   const { data: reviewSummary } = useGetReviewSummaryQuery()
   const [reviewsAsset, setReviewsAsset] = useState<{ id: string; name: string } | null>(null)
-  const reviewByAssetId = new Map((reviewSummary ?? []).map((a) => [a.id, a.review_count]))
+
+  // Map asset id → { review_count, unseen_count }
+  const reviewMap = new Map(
+    (reviewSummary ?? []).map((a) => [a.id, { count: a.review_count, unseen: a.unseen_count }])
+  )
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return
@@ -145,36 +148,63 @@ export default function AdminAssetsPage() {
               ))}</tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {data?.results.map((asset) => (
-                <tr key={asset.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{asset.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{asset.category_name}</td>
-                  <td className="px-4 py-3 text-gray-600">{asset.available_qty}/{asset.total_qty}</td>
-                  <td className="px-4 py-3"><StatusBadge status={asset.status} /></td>
-                  <td className="px-4 py-3"><StatusBadge status={asset.condition} /></td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{asset.location || '—'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setModalAsset(asset)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDelete(asset.id, asset.name)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
-                      <button
-                        onClick={() => setReviewsAsset({ id: asset.id, name: asset.name })}
-                        className="group relative p-1.5 rounded-lg transition-colors text-gray-400 hover:text-primary hover:bg-primary-light"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        {(reviewByAssetId.get(asset.id) ?? 0) > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9px] font-semibold flex items-center justify-center">
-                            {reviewByAssetId.get(asset.id)}
-                          </span>
+              {data?.results.map((asset) => {
+                const rv = reviewMap.get(asset.id)
+                const hasReviews = rv && rv.count > 0
+                const hasUnseen = rv && rv.unseen > 0
+
+                return (
+                  <tr key={asset.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">{asset.name}</td>
+                    <td className="px-4 py-3 text-gray-500">{asset.category_name}</td>
+                    <td className="px-4 py-3 text-gray-600">{asset.available_qty}/{asset.total_qty}</td>
+                    <td className="px-4 py-3"><StatusBadge status={asset.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={asset.condition} /></td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{asset.location || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setModalAsset(asset)}
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(asset.id, asset.name)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Review button — only show if there are reviews */}
+                        {hasReviews && (
+                          <button
+                            onClick={() => setReviewsAsset({ id: asset.id, name: asset.name })}
+                            className={cn(
+                              'group relative p-1.5 rounded-lg transition-colors',
+                              hasUnseen
+                                ? 'text-primary hover:bg-primary-light'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                            )}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            {/* Dot indicator: green = unseen, gray = all seen */}
+                            <span
+                              className={cn(
+                                'absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white',
+                                hasUnseen ? 'bg-green-500' : 'bg-gray-300'
+                              )}
+                            />
+                            <span className="absolute bottom-full right-0 mb-1 whitespace-nowrap bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                              {hasUnseen ? `${rv!.unseen} new review${rv!.unseen > 1 ? 's' : ''}` : `${rv!.count} review${rv!.count > 1 ? 's' : ''}`}
+                            </span>
+                          </button>
                         )}
-                        <span className="absolute bottom-full right-0 mb-1 whitespace-nowrap bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          Reviews
-                        </span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

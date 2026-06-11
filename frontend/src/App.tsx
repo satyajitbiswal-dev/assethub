@@ -14,6 +14,7 @@ import MyBookingsPage   from '@/pages/user/MyBookingsPage'
 import QrScannerPage    from '@/pages/user/QrScannerPage'
 import ProfilePage      from '@/pages/user/ProfilePage'
 import FeedbackPage     from '@/pages/user/FeedbackPage'
+import UserReviewsPage  from '@/pages/user/UserReviewsPage'
 
 import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage'
 import AdminDashboard   from '@/pages/admin/AdminDashboard'
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/dashboard"     element={<UserDashboard />} />
             <Route path="/assets"        element={<AssetsPage />} />
             <Route path="/my-bookings"   element={<MyBookingsPage />} />
+            <Route path="/reviews"       element={<UserReviewsPage />} />
             <Route path="/scan"          element={<QrScannerPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/profile"       element={<ProfilePage />} />

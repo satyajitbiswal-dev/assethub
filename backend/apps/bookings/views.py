@@ -193,37 +193,52 @@ class AuditLogListView(generics.ListAPIView):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "delete", "head", "options"]
     pagination_class = None
-
+ 
     def get_permissions(self):
-        if self.action in ("by_asset", "summary"):
+        if self.action in ("by_asset", "summary", "mark_seen"):
             return [IsAdminUser()]
         return [permissions.IsAuthenticated()]
-
+ 
     def get_queryset(self):
         user = self.request.user
         qs = Review.objects.select_related("user", "asset")
         if user.role != "admin":
             qs = qs.filter(user=user)
         return qs
-
+ 
     @action(detail=False, methods=["get"], url_path="by-asset/(?P<asset_id>[^/.]+)")
     def by_asset(self, request, asset_id=None):
         qs = Review.objects.filter(asset__id=asset_id).select_related("user", "asset")
+        # Mark all as seen when admin views them
+        qs.filter(is_seen=False).update(is_seen=True)
         return Response(ReviewSerializer(qs, many=True).data)
-
+ 
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
-        """Admin: list of assets that have at least one review, with counts."""
+        """Admin: list of assets that have at least one review, with counts and unseen count."""
         from apps.assets.models import Asset
         assets = (
             Asset.objects.filter(reviews__isnull=False)
             .distinct()
             .annotate(review_count=Count("reviews"))
         )
-        data = [
-            {"id": str(a.id), "name": a.name, "category_name": a.category.name, "review_count": a.review_count}
-            for a in assets
-        ]
+        data = []
+        for a in assets:
+            unseen_count = Review.objects.filter(asset=a, is_seen=False).count()
+            data.append({
+                "id": str(a.id),
+                "name": a.name,
+                "category_name": a.category.name,
+                "review_count": a.review_count,
+                "unseen_count": unseen_count,
+            })
         return Response(data)
+ 
+    @action(detail=False, methods=["delete"], url_path="clear-mine", permission_classes=[permissions.IsAuthenticated])
+    def clear_mine(self, request):
+        """User: delete all their own reviews."""
+        deleted_count, _ = Review.objects.filter(user=request.user).delete()
+        return Response({"success": True, "deleted": deleted_count})
+ 

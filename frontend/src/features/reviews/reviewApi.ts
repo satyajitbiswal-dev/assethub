@@ -12,7 +12,7 @@ export const reviewsApi = baseApi.injectEndpoints({
       transformResponse: normalizeReviews,
       providesTags: ['Review'],
     }),
-    submitReview: build.mutation<Review, { booking: string; text: string }>({
+    submitReview: build.mutation<Review, { booking: string; text: string; rating: number }>({
       query: (body) => ({ url: '/bookings/reviews/', method: 'POST', body }),
       async onQueryStarted({ booking }, { dispatch, queryFulfilled }) {
         try {
@@ -36,6 +36,10 @@ export const reviewsApi = baseApi.injectEndpoints({
       query: (assetId) => `/bookings/reviews/by-asset/${assetId}/`,
       providesTags: (_r, _e, assetId) => [{ type: 'Review', id: `asset-${assetId}` }],
     }),
+    clearMyReviews: build.mutation<{ success: boolean; deleted: number }, void>({
+      query: () => ({ url: '/bookings/reviews/clear-mine/', method: 'DELETE' }),
+      invalidatesTags: ['Review'],
+    }),
   }),
 })
 
@@ -44,4 +48,5 @@ export const {
   useSubmitReviewMutation,
   useGetReviewSummaryQuery,
   useGetReviewsByAssetQuery,
+  useClearMyReviewsMutation,
 } = reviewsApi

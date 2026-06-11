@@ -63,8 +63,11 @@ export interface PaginatedResponse<T> {
 
 export interface Review {
   id: string; booking: string; user: string; user_detail: User
-  asset: string; asset_name: string; text: string; created_at: string
+  asset: string; asset_name: string; text: string; rating: number
+  is_seen: boolean; created_at: string
 }
 export interface AssetReviewSummary {
-  id: string; name: string; category_name: string; review_count: number
+  id: string; name: string; category_name: string
+  review_count: number; unseen_count: number
 }
+ 
