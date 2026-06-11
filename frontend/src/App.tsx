@@ -13,7 +13,9 @@ import AssetsPage       from '@/pages/user/AssetsPage'
 import MyBookingsPage   from '@/pages/user/MyBookingsPage'
 import QrScannerPage    from '@/pages/user/QrScannerPage'
 import ProfilePage      from '@/pages/user/ProfilePage'
+import FeedbackPage     from '@/pages/user/FeedbackPage'
 
+import AdminFeedbackPage from '@/pages/admin/AdminFeedbackPage'
 import AdminDashboard   from '@/pages/admin/AdminDashboard'
 import AdminAssetsPage  from '@/pages/admin/AdminAssetsPage'
 import AdminBookingsPage from '@/pages/admin/AdminBookingsPage'
@@ -51,6 +53,7 @@ export default function App() {
             <Route path="/scan"          element={<QrScannerPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/profile"       element={<ProfilePage />} />
+            <Route path="/feedback"      element={<FeedbackPage />} />
           </Route>
         </Route>
 
@@ -62,6 +65,7 @@ export default function App() {
             <Route path="/admin/bookings"   element={<AdminBookingsPage />} />
             <Route path="/admin/users"      element={<AdminUsersPage />} />
             <Route path="/admin/analytics"  element={<AdminAnalyticsPage />} />
+            <Route path="/admin/feedback"      element={<AdminFeedbackPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/profile"       element={<ProfilePage />} />
           </Route>

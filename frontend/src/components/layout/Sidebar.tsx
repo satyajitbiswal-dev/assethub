@@ -1,7 +1,6 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard, Package, BookOpen, Bell,
-  LogOut, Shield, BarChart2, QrCode, ScanLine,
+import { LayoutDashboard, Package, BookOpen, Bell,
+  LogOut, Shield, BarChart2, ScanLine, MessageSquarePlus, Mail, Phone,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
@@ -10,20 +9,22 @@ import { useGetNotificationsQuery } from '@/features/notifications/notifications
 import { cn } from '@/lib/utils'
 
 const userLinks = [
-  { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/assets',        icon: Package,         label: 'Assets' },
-  { to: '/my-bookings',   icon: BookOpen,        label: 'My Bookings' },
-  { to: '/scan',          icon: ScanLine,        label: 'QR Scanner' },
-  { to: '/notifications', icon: Bell,            label: 'Notifications' },
+  { to: '/dashboard',     icon: LayoutDashboard,    label: 'Dashboard' },
+  { to: '/assets',        icon: Package,            label: 'Assets' },
+  { to: '/my-bookings',   icon: BookOpen,           label: 'My Bookings' },
+  { to: '/scan',          icon: ScanLine,           label: 'QR Scanner' },
+  { to: '/notifications', icon: Bell,               label: 'Notifications' },
+  { to: '/feedback',      icon: MessageSquarePlus,  label: 'Feedback' },
 ]
 
 const adminLinks = [
-  { to: '/admin/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/assets',     icon: Package,         label: 'Assets' },
-  { to: '/admin/bookings',   icon: BookOpen,        label: 'Bookings' },
-  { to: '/admin/analytics',  icon: BarChart2,       label: 'Analytics' },
-  { to: '/admin/users',      icon: Shield,          label: 'Users' },
-  { to: '/notifications',    icon: Bell,            label: 'Notifications' },
+  { to: '/admin/dashboard',  icon: LayoutDashboard,   label: 'Dashboard' },
+  { to: '/admin/assets',     icon: Package,           label: 'Assets' },
+  { to: '/admin/bookings',   icon: BookOpen,          label: 'Bookings' },
+  { to: '/admin/analytics',  icon: BarChart2,         label: 'Analytics' },
+  { to: '/admin/users',      icon: Shield,            label: 'Users' },
+  { to: '/notifications',    icon: Bell,              label: 'Notifications' },
+  { to: '/admin/feedback',   icon: MessageSquarePlus, label: 'Feedback' },
 ]
 
 export default function Sidebar() {
@@ -80,6 +81,25 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Contact Us */}
+      <div className="px-4 py-3 mx-3 mb-2 rounded-xl bg-gray-50 border border-gray-100">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Contact Us</p>
+        <a
+          href="mailto:support@assethub.iitroorkee.ac.in"
+          className="flex items-center gap-2 text-xs text-gray-500 hover:text-primary transition-colors mb-1.5"
+        >
+          <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">support@assethub.iitr.ac.in</span>
+        </a>
+        <a
+          href="tel:+911234567890"
+          className="flex items-center gap-2 text-xs text-gray-500 hover:text-primary transition-colors"
+        >
+          <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>+91 12345 67890</span>
+        </a>
+      </div>
 
       {/* User footer */}
       <div className="px-3 py-3 border-t border-gray-100">

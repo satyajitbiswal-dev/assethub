@@ -10,4 +10,5 @@ urlpatterns = [
     path("api/bookings/", include("apps.bookings.urls")),
     path("api/analytics/", include("apps.analytics.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
+    path("api/feedback/", include("apps.feedback.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
