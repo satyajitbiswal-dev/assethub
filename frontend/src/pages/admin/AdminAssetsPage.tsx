@@ -143,7 +143,8 @@ export default function AdminAssetsPage() {
 
       {isLoading ? <LoadingSpinner /> : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>{['Name', 'Category', 'Qty', 'Status', 'Condition', 'Location', ''].map((h) => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500">{h}</th>
@@ -217,6 +218,7 @@ export default function AdminAssetsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
       {modalAsset !== undefined && <AssetModal asset={modalAsset ?? undefined} onClose={() => setModalAsset(undefined)} />}

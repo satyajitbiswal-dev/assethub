@@ -122,7 +122,8 @@ export default function AdminUsersPage() {
         <EmptyState icon={Users} title="No users found" />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[780px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {['Name', 'Enrollment', 'Email', 'Department', 'Role', 'Joined', 'Status', 'Actions'].map((h) => (
@@ -178,6 +179,7 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

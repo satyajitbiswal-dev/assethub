@@ -37,7 +37,8 @@ export default function AdminBookingsPage() {
         <EmptyState icon={BookOpen} title={`No ${statusFilter} bookings`} />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[680px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {['User', 'Asset', 'Qty', 'Dates', 'Status', 'Actions'].map((h) => (
@@ -85,6 +86,7 @@ export default function AdminBookingsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
