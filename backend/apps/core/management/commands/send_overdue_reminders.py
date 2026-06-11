@@ -8,6 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 from apps.bookings.models import Booking
 from apps.notifications.utils import notify_user
+from apps.notifications.tasks import send_email_task
 
 
 class Command(BaseCommand):
@@ -35,16 +36,11 @@ class Command(BaseCommand):
                 body=message,
             )
             # Email
-            try:
-                send_mail(
-                    subject=f"[AssetHub] Overdue return: {booking.asset.name}",
-                    message=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[booking.user.email],
-                    fail_silently=True,
-                )
-            except Exception:
-                pass
+            send_email_task.delay(
+                subject=f"[AssetHub] Overdue return: {booking.asset.name}",
+                message=message,
+                recipient_list=[booking.user.email],
+            )
             count += 1
 
         self.stdout.write(

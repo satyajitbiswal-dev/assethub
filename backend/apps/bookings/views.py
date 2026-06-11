@@ -3,6 +3,8 @@ from django.db import transaction
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from apps.notifications.tasks import send_email_task
 from .models import Booking, AuditLog, Review
 from .serializers import BookingSerializer, BookingCreateSerializer, RejectSerializer, AuditLogSerializer, ReviewSerializer
 from apps.core.permissions import IsAdminUser, IsOwnerOrAdmin
@@ -56,6 +58,12 @@ class BookingViewSet(viewsets.ModelViewSet):
                 title="New booking request",
                 body=f"{booking.user.full_name} requested {booking.quantity}x {booking.asset.name}",
             )
+            send_email_task.delay(
+            subject="New booking request",
+            message=f"{booking.user.full_name} requested {booking.quantity}x {booking.asset.name}",
+            recipient_list=[admin.email],
+        )
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -97,6 +105,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking.save()
         AuditLog.log(request.user, "booking_approved", booking)
         notify_user(booking.user, "Booking approved", f"Your request for {booking.asset.name} was approved.")
+        send_email_task.delay(
+            subject="Booking approved",
+            message=f"Your request for {booking.asset.name} was approved.",
+            recipient_list=[booking.user.email],
+        )
         return Response(BookingSerializer(booking).data)
 
     @action(detail=True, methods=["patch"], url_path="reject", permission_classes=[IsAdminUser])
@@ -117,6 +130,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking.save()
         AuditLog.log(request.user, "booking_rejected", booking)
         notify_user(booking.user, "Booking rejected", f"Your request for {booking.asset.name} was rejected.")
+        send_email_task.delay(
+            subject="Booking rejected",
+            message=f"Your request for {booking.asset.name} was rejected.",
+            recipient_list=[booking.user.email],
+        )
         return Response(BookingSerializer(booking).data)
 
     @action(detail=True, methods=["patch"], url_path="issue", permission_classes=[IsAdminUser])
@@ -141,6 +159,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking.save()
         AuditLog.log(request.user, "asset_issued", booking, {"qty": booking.quantity})
         notify_user(booking.user, "Asset issued", f"{booking.asset.name} has been issued to you.")
+        send_email_task.delay(
+            subject="Asset issued",
+            message=f"{booking.asset.name} has been issued to you.",
+            recipient_list=[booking.user.email],
+        )
         return Response(BookingSerializer(booking).data)
 
     @action(detail=True, methods=["patch"], url_path="return", permission_classes=[IsAdminUser])

@@ -14,6 +14,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, ChangePasswordSerializer
 from apps.core.permissions import IsAdminUser
+from apps.notifications.tasks import send_email_task
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -115,28 +116,23 @@ class ForgotPasswordView(APIView):
         user.set_password(temp_password)
         user.save(update_fields=["password"])
 
-        try:
-            send_mail(
-                subject="[AssetHub] Your temporary password",
-                message=(
-                    f"Hi {user.first_name or user.email},\n\n"
-                    f"Your temporary password is:\n\n"
-                    f"    {temp_password}\n\n"
-                    f"Use it to sign in at AssetHub. You can keep using it as long as you like —"
-                    f" there's no requirement to change it.\n\n"
-                    f"If you'd like to set your own password, go to Profile → Change Password"
-                    f" after signing in.\n\n"
-                    f"If you didn't request this, you can safely ignore this email.\n\n"
-                    f"— The AssetHub team"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
-        except Exception:
-            # Email failure is swallowed intentionally — the password is still reset.
-            # In production wire this to a proper logger / alerting system.
-            pass
+        send_email_task.delay(
+            subject="[AssetHub] Your temporary password",
+            message=(
+                f"Hi {user.first_name or user.email},\n\n"
+                f"Your temporary password is:\n\n"
+                f"    {temp_password}\n\n"
+                f"Use it to sign in at AssetHub. You can keep using it as long as you like —"
+                f" there's no requirement to change it.\n\n"
+                f"If you'd like to set your own password, go to Profile → Change Password"
+                f" after signing in.\n\n"
+                f"If you didn't request this, you can safely ignore this email.\n\n"
+                f"— The AssetHub team"
+            ),
+            recipient_list=[user.email],
+        )
+
+        return Response(GENERIC_OK)
 
         return Response(GENERIC_OK)
 
