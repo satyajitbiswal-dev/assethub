@@ -1,39 +1,40 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
-import { useGetAssetQuery } from '@/features/assets/assetsApi'
-import { useCreateBookingMutation } from '@/features/bookings/bookingsApi'
+import { useGetAssetQuery, useGetActiveBookingQuery } from '@/features/assets/assetsApi'
+import { useIssueBookingMutation, useReturnBookingMutation } from '@/features/bookings/bookingsApi'
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
-import { QrCode, X, CheckCircle } from 'lucide-react'
+import { QrCode, X, CheckCircle, ArrowDownCircle, RotateCcw } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
 
-const schema = z.object({
-  quantity:   z.coerce.number().min(1),
-  start_date: z.string().min(1, 'Required'),
-  end_date:   z.string().min(1, 'Required'),
-  reason:     z.string().optional(),
-})
-type FormData = z.infer<typeof schema>
+function AssetActionPanel({ assetId, onClose }: { assetId: string; onClose: () => void }) {
+  const { data: asset, isLoading: assetLoading } = useGetAssetQuery(assetId)
+  const { data: booking, isLoading: bookingLoading, refetch } = useGetActiveBookingQuery(assetId)
+  const [issue, { isLoading: issuing }] = useIssueBookingMutation()
+  const [returnBooking, { isLoading: returning }] = useReturnBookingMutation()
 
-const inputCls =
-  'w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
+  const isLoading = assetLoading || bookingLoading
 
-function AssetPreview({ assetId, onClose }: { assetId: string; onClose: () => void }) {
-  const { data: asset, isLoading } = useGetAssetQuery(assetId)
-  const [create, { isLoading: booking }] = useCreateBookingMutation()
-  const today = new Date().toISOString().split('T')[0]
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) })
-
-  const onSubmit = async (data: FormData) => {
+  const handleIssue = async () => {
+    if (!booking) return
     try {
-      await create({ asset: assetId, ...data }).unwrap()
-      toast.success('Booking request submitted!')
-      onClose()
+      await issue(booking.id).unwrap()
+      toast.success('Asset issued')
+      refetch()
     } catch (err: unknown) {
-      toast.error((err as { data?: { message?: string } })?.data?.message ?? 'Booking failed')
+      toast.error((err as { data?: { message?: string } })?.data?.message ?? 'Issue failed')
+    }
+  }
+
+  const handleReturn = async () => {
+    if (!booking) return
+    try {
+      await returnBooking(booking.id).unwrap()
+      toast.success('Asset returned')
+      refetch()
+    } catch (err: unknown) {
+      toast.error((err as { data?: { message?: string } })?.data?.message ?? 'Return failed')
     }
   }
 
@@ -77,45 +78,41 @@ function AssetPreview({ assetId, onClose }: { assetId: string; onClose: () => vo
         ))}
       </div>
 
-      {asset.status === 'available' && asset.available_qty > 0 ? (
-        <form onSubmit={handleSubmit(onSubmit)} className="px-5 py-4 space-y-3">
-          <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">Book this asset</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Qty (max {asset.available_qty})</label>
-              <input {...register('quantity')} type="number" min={1} max={asset.available_qty} defaultValue={1} className={inputCls} />
-              {errors.quantity && <p className="text-xs text-red-500 mt-0.5">{errors.quantity.message}</p>}
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Reason</label>
-              <input {...register('reason')} className={inputCls} placeholder="Optional" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Start date</label>
-              <input {...register('start_date')} type="date" min={today} className={inputCls} />
-              {errors.start_date && <p className="text-xs text-red-500 mt-0.5">{errors.start_date.message}</p>}
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">End date</label>
-              <input {...register('end_date')} type="date" min={today} className={inputCls} />
-              {errors.end_date && <p className="text-xs text-red-500 mt-0.5">{errors.end_date.message}</p>}
-            </div>
-          </div>
-          <button type="submit" disabled={booking}
-            className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-60 transition-colors">
-            {booking ? 'Submitting…' : 'Submit booking request'}
-          </button>
-        </form>
+      {!booking ? (
+        <div className="px-5 py-6 text-center text-sm text-gray-400">
+          No pending issue/return action — this asset has no approved or issued booking right now.
+        </div>
       ) : (
-        <div className="px-5 py-4 text-center text-sm text-gray-400">
-          This asset is currently <strong>{asset.status}</strong> and cannot be booked.
+        <div className="px-5 py-4 space-y-3">
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-sm font-medium text-gray-900">{booking.user_detail?.full_name}</p>
+            <p className="text-xs text-gray-500">{booking.user_detail?.department}</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {formatDate(booking.start_date)} → {formatDate(booking.end_date)} · ×{booking.quantity}
+            </p>
+            <div className="mt-2"><StatusBadge status={booking.status} /></div>
+          </div>
+
+          {booking.status === 'approved' && (
+            <button onClick={handleIssue} disabled={issuing}
+              className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+              <ArrowDownCircle className="w-4 h-4" /> {issuing ? 'Issuing…' : 'Issue asset'}
+            </button>
+          )}
+
+          {booking.status === 'issued' && (
+            <button onClick={handleReturn} disabled={returning}
+              className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+              <RotateCcw className="w-4 h-4" /> {returning ? 'Returning…' : 'Mark as returned'}
+            </button>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-export default function QrScannerPage() {
+export default function AdminQrScannerPage() {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const [scanning, setScanning] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -127,13 +124,12 @@ export default function QrScannerPage() {
     if (!scanner) return
     try {
       const state = scanner.getState()
-      // 2 = SCANNING per html5-qrcode's Html5QrcodeScannerState
       if (state === 2) {
         await scanner.stop()
       }
       scanner.clear()
     } catch {
-      /* ignore — element may already be cleared */
+      /* ignore */
     } finally {
       scannerRef.current = null
     }
@@ -144,11 +140,9 @@ export default function QrScannerPage() {
     setScannedId(null)
     setStarting(true)
 
-    // Ensure any previous instance is fully torn down first
     await stopScanInternal()
 
     try {
-      // Pick camera explicitly — works better on laptops than facingMode alone
       const cameras = await Html5Qrcode.getCameras()
       if (!cameras.length) {
         setError('No camera found on this device.')
@@ -156,10 +150,9 @@ export default function QrScannerPage() {
         return
       }
 
-      const scanner = new Html5Qrcode('qr-reader')
+      const scanner = new Html5Qrcode('admin-qr-reader')
       scannerRef.current = scanner
 
-      // Prefer a back/environment camera if labelled, else first available
       const preferred =
         cameras.find((c) => /back|rear|environment/i.test(c.label)) ?? cameras[0]
 
@@ -178,7 +171,7 @@ export default function QrScannerPage() {
             setError('QR code is not an AssetHub asset code.')
           }
         },
-        () => {}, // per-frame failure callback — ignore, fires constantly while scanning
+        () => {},
       )
     } catch (err) {
       console.error(err)
@@ -203,12 +196,11 @@ export default function QrScannerPage() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <PageHeader title="QR Scanner" subtitle="Scan an asset QR code to view details and book instantly" />
+      <PageHeader title="QR Scanner" subtitle="Scan an asset QR code to issue or return it" />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6">
-        {/* Fixed-size container — prevents layout collapse/jump when video injects */}
         <div
-          id="qr-reader"
+          id="admin-qr-reader"
           className="w-full overflow-hidden rounded-lg bg-gray-900"
           style={{ minHeight: scanning ? 280 : 0, display: scanning ? 'block' : 'none' }}
         />
@@ -220,7 +212,7 @@ export default function QrScannerPage() {
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-gray-900">Ready to scan</p>
-              <p className="text-xs text-gray-500 mt-1">Point your camera at an asset QR code</p>
+              <p className="text-xs text-gray-500 mt-1">Point camera at an asset QR code to issue or return it</p>
             </div>
             <button onClick={startScan} disabled={starting}
               className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-60">
@@ -239,7 +231,7 @@ export default function QrScannerPage() {
         {error && <p className="mt-4 text-sm text-red-500 text-center bg-red-50 rounded-lg px-4 py-3">{error}</p>}
       </div>
 
-      {scannedId && <AssetPreview assetId={scannedId} onClose={() => setScannedId(null)} />}
+      {scannedId && <AssetActionPanel assetId={scannedId} onClose={() => setScannedId(null)} />}
     </div>
   )
 }

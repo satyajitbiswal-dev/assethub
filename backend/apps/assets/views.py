@@ -57,3 +57,20 @@ class AssetViewSet(viewsets.ModelViewSet):
         img.save(buf, format="PNG")
         buf.seek(0)
         return HttpResponse(buf.getvalue(), content_type="image/png")
+    
+
+    @action(detail=True, methods=["get"], url_path="active-booking", permission_classes=[IsAdminUser])
+    def active_booking(self, request, pk=None):
+        """Return the current approved/issued booking for this asset, if any."""
+        from bookings.models import Booking
+        from bookings.serializers import BookingSerializer
+
+        booking = (
+            Booking.objects.filter(asset__id=pk, status__in=["approved", "issued"])
+            .select_related("user", "asset__category", "reviewed_by")
+            .order_by("-created_at")
+            .first()
+        )
+        if not booking:
+            return Response({"detail": "No active booking for this asset."}, status=404)
+        return Response(BookingSerializer(booking).data)

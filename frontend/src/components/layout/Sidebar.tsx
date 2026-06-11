@@ -25,6 +25,7 @@ const adminLinks = [
   { to: '/admin/users',      icon: Shield,            label: 'Users' },
   { to: '/notifications',    icon: Bell,              label: 'Notifications' },
   { to: '/admin/feedback',   icon: MessageSquarePlus, label: 'Feedback' },
+  { to: '/admin/scan',       icon: ScanLine,          label: 'QR Scanner' },
 ]
 
 export default function Sidebar() {

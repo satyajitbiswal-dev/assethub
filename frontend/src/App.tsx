@@ -21,6 +21,7 @@ import AdminAssetsPage  from '@/pages/admin/AdminAssetsPage'
 import AdminBookingsPage from '@/pages/admin/AdminBookingsPage'
 import AdminUsersPage   from '@/pages/admin/AdminUsersPage'
 import AdminAnalyticsPage from '@/pages/admin/AdminAnalyticsPage'
+import AdminQrScannerPage from '@/pages/admin/AdminQrScannerPage'
 
 import NotificationsPage from '@/pages/NotificationsPage'
 
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/admin/feedback"      element={<AdminFeedbackPage />} />
             <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/admin/profile"       element={<ProfilePage />} />
+            <Route path="/admin/scan"          element={<AdminQrScannerPage />} />
           </Route>
         </Route>
 

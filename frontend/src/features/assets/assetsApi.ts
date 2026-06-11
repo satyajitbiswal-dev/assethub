@@ -1,5 +1,5 @@
 import { baseApi } from '@/app/baseApi'
-import { Asset, Category, PaginatedResponse } from '@/types'
+import { Asset, Booking, Category, PaginatedResponse } from '@/types'
 
 interface AssetFilters {
   search?: string; category?: string; status?: string
@@ -43,6 +43,15 @@ export const assetsApi = baseApi.injectEndpoints({
     getAssetQr: build.query<string, string>({
       query: (id) => ({ url: `/assets/${id}/qr/`, responseHandler: async (r) => URL.createObjectURL(await r.blob()) }),
     }),
+    getActiveBooking: build.query<Booking | null, string>({
+      query: (assetId) => ({
+        url: `/assets/${assetId}/active-booking/`,
+        validateStatus: (response) => response.status === 200 || response.status === 404,
+      }),
+      transformResponse: (res: Booking | { detail: string }) =>
+        'id' in res ? res : null,
+      providesTags: (_r, _e, id) => [{ type: 'Asset', id }],
+    }),
   }),
 })
 
@@ -55,4 +64,5 @@ export const {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
   useGetAssetQrQuery,
+  useGetActiveBookingQuery,
 } = assetsApi
