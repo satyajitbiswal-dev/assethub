@@ -12,15 +12,15 @@ import { useGetMyReviewsQuery } from '@/features/reviews/reviewApi'
 import { useGetBookingsQuery } from '@/features/bookings/bookingsApi'
 import { cn } from '@/lib/utils'
 
-const adminLinks = [
-  { to: '/admin/dashboard',  icon: LayoutDashboard,   label: 'Dashboard' },
-  { to: '/admin/assets',     icon: Package,           label: 'Assets' },
-  { to: '/admin/bookings',   icon: BookOpen,          label: 'Bookings' },
-  { to: '/admin/analytics',  icon: BarChart2,         label: 'Analytics' },
-  { to: '/admin/users',      icon: Shield,            label: 'Users' },
-  { to: '/notifications',    icon: Bell,              label: 'Notifications' },
-  { to: '/admin/feedback',   icon: MessageSquarePlus, label: 'Feedback' },
-  { to: '/admin/scan',       icon: ScanLine,          label: 'QR Scanner' },
+const buildAdminLinks = (unread: number) => [
+  { to: '/admin/dashboard',  icon: LayoutDashboard,   label: 'Dashboard',     badge: 0 },
+  { to: '/admin/assets',     icon: Package,           label: 'Assets',        badge: 0 },
+  { to: '/admin/bookings',   icon: BookOpen,          label: 'Bookings',      badge: 0 },
+  { to: '/admin/analytics',  icon: BarChart2,         label: 'Analytics',     badge: 0 },
+  { to: '/admin/users',      icon: Shield,            label: 'Users',         badge: 0 },
+  { to: '/notifications',    icon: Bell,              label: 'Notifications', badge: unread },
+  { to: '/admin/feedback',   icon: MessageSquarePlus, label: 'Feedback',      badge: 0 },
+  { to: '/admin/scan',       icon: ScanLine,          label: 'QR Scanner',    badge: 0 },
 ]
 
 interface SidebarProps {
@@ -59,7 +59,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, collapsed, onToggle
     { to: '/feedback',      icon: MessageSquarePlus,  label: 'Feedback',      badge: 0 },
   ]
 
-  const links = isAdmin ? adminLinks : userLinks
+  const links = isAdmin ? buildAdminLinks(unread) : userLinks
 
   const handleLogout = async () => {
     if (refreshToken) await logoutApi({ refresh: refreshToken }).catch(() => {})
