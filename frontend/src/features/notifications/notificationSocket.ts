@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast'
 import { store } from '@/app/store'
-import { Notification } from '@/types'
+import { baseApi } from '@/app/baseApi'
+import { Notification, NotificationsResponse } from '@/types'
 import { notificationsApi } from './notificationsApi'
 
 interface WsMessage {
@@ -10,46 +11,54 @@ interface WsMessage {
   unread_count: number
 }
 
+function patchNotifications(updater: (draft: NotificationsResponse) => void) {
+  const current = notificationsApi.endpoints.getNotifications.select()(store.getState()).data
+  const draft: NotificationsResponse = current
+    ? { unread_count: current.unread_count, results: current.results.map((n) => ({ ...n })) }
+    : { unread_count: 0, results: [] }
+
+  updater(draft)
+
+  store.dispatch(notificationsApi.util.upsertQueryData('getNotifications', undefined, draft))
+}
+
+function refreshOperationalData() {
+  store.dispatch(baseApi.util.invalidateTags(['Booking', 'Analytics', 'Asset', 'Notification']))
+}
+
 function handleMessage(data: WsMessage) {
   switch (data.type) {
     case 'notification.new':
       if (!data.notification) return
-      store.dispatch(
-        notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
-          const exists = draft.results.some((n) => n.id === data.notification!.id)
-          if (!exists) draft.results.unshift(data.notification!)
-          draft.unread_count = data.unread_count
-        }),
-      )
+      patchNotifications((draft) => {
+        const exists = draft.results.some((n) => n.id === data.notification!.id)
+        if (!exists) draft.results.unshift(data.notification!)
+        draft.unread_count = data.unread_count
+      })
+      refreshOperationalData()
       toast(data.notification.title, { icon: '🔔' })
       break
 
     case 'notification.read':
-      store.dispatch(
-        notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
-          const item = draft.results.find((n) => n.id === data.notification_id)
-          if (item) item.is_read = true
-          draft.unread_count = data.unread_count
-        }),
-      )
+      patchNotifications((draft) => {
+        const item = draft.results.find((n) => n.id === data.notification_id)
+        if (item) item.is_read = true
+        draft.unread_count = data.unread_count
+      })
       break
 
     case 'notifications.read_all':
-      store.dispatch(
-        notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
-          draft.results.forEach((n) => { n.is_read = true })
-          draft.unread_count = 0
-        }),
-      )
+      patchNotifications((draft) => {
+        draft.results.forEach((n) => { n.is_read = true })
+        draft.unread_count = 0
+      })
       break
 
     case 'notifications.cleared':
-      store.dispatch(
-        notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
-          draft.results = []
-          draft.unread_count = 0
-        }),
-      )
+      patchNotifications((draft) => {
+        draft.results = []
+        draft.unread_count = 0
+      })
       break
   }
 }

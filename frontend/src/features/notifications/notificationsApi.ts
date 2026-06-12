@@ -6,6 +6,7 @@ export const notificationsApi = baseApi.injectEndpoints({
     getNotifications: build.query<NotificationsResponse, void>({
       query: () => '/notifications/',
       providesTags: ['Notification'],
+      keepUnusedDataFor: 300,
     }),
     markRead: build.mutation<{ success: boolean; unread_count: number }, string>({
       query: (id) => ({ url: `/notifications/${id}/read/`, method: 'PATCH' }),

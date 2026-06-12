@@ -51,9 +51,9 @@ export interface Notification {
 export interface NotificationsResponse { unread_count: number; results: Notification[] }
 
 export interface AuditLog {
-  id: string; actor: string; actor_name: string; action: string
-  target_type: string; target_id: string
-  metadata: Record<string, unknown>; created_at: string
+  id: string; actor_name: string; action: string
+  action_label: string; summary: string; target_label: string
+  created_at: string
 }
 
 export interface PaginatedResponse<T> {

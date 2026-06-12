@@ -32,3 +32,23 @@ export const STATUS_COLORS: Record<string, string> = {
 export function statusBadge(status: string) {
   return cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize', STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-600')
 }
+
+/** Parse DRF / custom API error envelopes into a user-facing string. */
+export function getApiErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  const data = (err as { data?: Record<string, unknown> })?.data
+  if (!data) return fallback
+  if (typeof data.message === 'string' && data.message) return data.message
+  if (typeof data.detail === 'string' && data.detail) return data.detail
+  const errors = data.errors as Record<string, string[] | string> | undefined
+  if (errors) {
+    for (const value of Object.values(errors)) {
+      if (Array.isArray(value) && value[0]) return String(value[0])
+      if (typeof value === 'string' && value) return value
+    }
+  }
+  for (const value of Object.values(data)) {
+    if (Array.isArray(value) && value[0]) return String(value[0])
+    if (typeof value === 'string' && value && value !== 'false') return value
+  }
+  return fallback
+}

@@ -4,6 +4,8 @@ import { Booking, PaginatedResponse } from '@/types'
 interface BookingFilters { status?: string; asset?: string; page?: number }
 interface BookingCreate { asset: string; quantity: number; start_date: string; end_date: string; reason?: string }
 
+const bookingListTags = ['Booking', 'Analytics', 'Notification', 'Asset'] as const
+
 export const bookingsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getBookings: build.query<PaginatedResponse<Booking>, BookingFilters>({
@@ -19,27 +21,27 @@ export const bookingsApi = baseApi.injectEndpoints({
     }),
     createBooking: build.mutation<Booking, BookingCreate>({
       query: (body) => ({ url: '/bookings/', method: 'POST', body }),
-      invalidatesTags: ['Booking', 'Asset', 'Analytics'],
+      invalidatesTags: [...bookingListTags],
     }),
     cancelBooking: build.mutation<Booking, string>({
       query: (id) => ({ url: `/bookings/${id}/cancel/`, method: 'PATCH' }),
-      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Analytics'],
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
     approveBooking: build.mutation<Booking, string>({
       query: (id) => ({ url: `/bookings/${id}/approve/`, method: 'PATCH' }),
-      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Notification', 'Analytics'],
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
     rejectBooking: build.mutation<Booking, { id: string; reason?: string }>({
       query: ({ id, ...body }) => ({ url: `/bookings/${id}/reject/`, method: 'PATCH', body }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Analytics'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
     issueBooking: build.mutation<Booking, string>({
       query: (id) => ({ url: `/bookings/${id}/issue/`, method: 'PATCH' }),
-      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Asset', 'Analytics'],
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
     returnBooking: build.mutation<Booking, string>({
       query: (id) => ({ url: `/bookings/${id}/return/`, method: 'PATCH' }),
-      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Asset', 'Analytics'],
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
   }),
 })

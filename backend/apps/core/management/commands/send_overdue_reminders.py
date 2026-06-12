@@ -3,12 +3,9 @@ python manage.py send_overdue_reminders
 Run daily (cron or Celery beat) to notify users with overdue bookings.
 """
 from django.core.management.base import BaseCommand
-from django.core.mail import send_mail
-from django.conf import settings
 from django.utils import timezone
 from apps.bookings.models import Booking
-from apps.notifications.utils import notify_user
-from apps.notifications.tasks import send_email_task
+from apps.bookings.reminders import send_overdue_reminder
 
 
 class Command(BaseCommand):
@@ -22,25 +19,7 @@ class Command(BaseCommand):
 
         count = 0
         for booking in overdue:
-            days_late = (today - booking.end_date).days
-            message = (
-                f"Your booking for '{booking.asset.name}' (×{booking.quantity}) "
-                f"was due on {booking.end_date.strftime('%d %b %Y')} "
-                f"and is now {days_late} day(s) overdue. "
-                f"Please return it as soon as possible."
-            )
-            # In-app notification
-            notify_user(
-                booking.user,
-                title=f"⚠ Overdue: {booking.asset.name}",
-                body=message,
-            )
-            # Email
-            send_email_task.delay(
-                subject=f"[AssetHub] Overdue return: {booking.asset.name}",
-                message=message,
-                recipient_list=[booking.user.email],
-            )
+            send_overdue_reminder(booking)
             count += 1
 
         self.stdout.write(

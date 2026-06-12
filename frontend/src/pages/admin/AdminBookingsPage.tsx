@@ -1,23 +1,47 @@
 import { useState } from 'react'
-import { useGetBookingsQuery, useApproveBookingMutation, useRejectBookingMutation, useIssueBookingMutation, useReturnBookingMutation } from '@/features/bookings/bookingsApi'
+import {
+  useGetBookingsQuery,
+  useApproveBookingMutation,
+  useRejectBookingMutation,
+  useIssueBookingMutation,
+  useReturnBookingMutation,
+  useSendOverdueReminderMutation,
+} from '@/features/bookings/bookingsApi'
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import EmptyState from '@/components/shared/EmptyState'
-import { BookOpen, CheckCircle, XCircle, ArrowDownCircle, RotateCcw } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { BookOpen, CheckCircle, XCircle, ArrowDownCircle, RotateCcw, Bell } from 'lucide-react'
+import { formatDate, getApiErrorMessage } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function AdminBookingsPage() {
   const [statusFilter, setStatusFilter] = useState('pending')
-  const { data, isLoading } = useGetBookingsQuery({ status: statusFilter })
+  const { data, isLoading } = useGetBookingsQuery(
+    { status: statusFilter },
+    { pollingInterval: 15000 },
+  )
   const [approve] = useApproveBookingMutation()
   const [reject] = useRejectBookingMutation()
   const [issue] = useIssueBookingMutation()
   const [returnBooking] = useReturnBookingMutation()
+  const [sendReminder] = useSendOverdueReminderMutation()
+  const [remindingId, setRemindingId] = useState<string | null>(null)
 
   const act = async (fn: () => Promise<unknown>, msg: string) => {
     try { await fn(); toast.success(msg) } catch { toast.error('Action failed') }
+  }
+
+  const handleRemind = async (bookingId: string, userName?: string) => {
+    setRemindingId(bookingId)
+    try {
+      const res = await sendReminder(bookingId).unwrap()
+      toast.success(res.message || `Reminder sent to ${userName ?? 'user'}`)
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Failed to send reminder'))
+    } finally {
+      setRemindingId(null)
+    }
   }
 
   const statuses = ['pending', 'approved', 'issued', 'returned', 'rejected', 'cancelled']
@@ -33,7 +57,7 @@ export default function AdminBookingsPage() {
         ))}
       </div>
 
-      {isLoading ? <LoadingSpinner /> : !data?.results.length ? (
+      {isLoading && !data ? <LoadingSpinner /> : !data?.results.length ? (
         <EmptyState icon={BookOpen} title={`No ${statusFilter} bookings`} />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -79,6 +103,16 @@ export default function AdminBookingsPage() {
                       {b.status === 'issued' && (
                         <button onClick={() => act(() => returnBooking(b.id).unwrap(), 'Returned')} title="Mark returned"
                           className="p-1.5 text-primary hover:bg-primary-light rounded-lg transition-colors"><RotateCcw className="w-4 h-4" /></button>
+                      )}
+                      {b.is_overdue && (
+                        <button
+                          onClick={() => handleRemind(b.id, b.user_detail?.full_name)}
+                          disabled={remindingId === b.id}
+                          title="Send overdue reminder (in-app + email)"
+                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <Bell className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   </td>

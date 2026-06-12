@@ -59,7 +59,7 @@ class RejectSerializer(serializers.Serializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    actor_name = serializers.CharField(source="actor.full_name", read_only=True)
+    actor_name = serializers.SerializerMethodField()
     action_label = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
     target_label = serializers.SerializerMethodField()
@@ -70,6 +70,9 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "id", "actor_name", "action", "action_label",
             "summary", "target_label", "created_at",
         ]
+
+    def get_actor_name(self, obj):
+        return obj.actor.full_name if obj.actor else "System"
 
     def get_action_label(self, obj):
         from .audit_utils import build_audit_display

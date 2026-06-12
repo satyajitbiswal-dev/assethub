@@ -13,6 +13,7 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid,
 } from 'recharts'
 import { formatDate, formatDateTime } from '@/lib/utils'
+import ChartContainer from '@/components/shared/ChartContainer'
 import { AlertTriangle, TrendingUp, Package, BookOpen, Clock, RotateCcw } from 'lucide-react'
 
 const COLORS = ['#1D9E75', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
@@ -48,24 +49,16 @@ function StatCard({
 }
 
 export default function AdminAnalyticsPage() {
-  const { data: summary, isLoading } = useGetSummaryQuery()
+  const { data: summary, isLoading } = useGetSummaryQuery(undefined, { pollingInterval: 30000 })
   const { data: topAssets }  = useGetTopAssetsQuery()
   const { data: utilisation } = useGetUtilisationQuery()
   const { data: overdue }    = useGetOverdueBookingsQuery()
   const { data: activity }   = useGetRecentActivityQuery()
 
-  if (isLoading) return <LoadingSpinner />
+  if (isLoading && !summary) return <LoadingSpinner />
 
   const pieData = utilisation?.map((c) => ({ name: c.category, value: c.borrowed_qty })).filter(d => d.value > 0)
 
-  const actionLabels: Record<string, string> = {
-    booking_created:   'New booking',
-    booking_approved:  'Approved',
-    booking_rejected:  'Rejected',
-    asset_issued:      'Issued',
-    asset_returned:    'Returned',
-    booking_cancelled: 'Cancelled',
-  }
   const actionColors: Record<string, string> = {
     booking_created:   'bg-blue-100 text-blue-700',
     booking_approved:  'bg-primary-light text-primary-dark',
@@ -92,17 +85,19 @@ export default function AdminAnalyticsPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Utilisation by category</h2>
           {utilisation?.length ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={utilisation} layout="vertical" margin={{ left: 8, right: 20, top: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={96} />
-                <Tooltip formatter={(v: number) => [`${v}%`, 'Utilisation']} />
-                <Bar dataKey="utilisation_rate" radius={[0, 4, 4, 0]} maxBarSize={22}>
-                  {utilisation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ChartContainer height={240}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={utilisation} layout="vertical" margin={{ left: 8, right: 20, top: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                  <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={96} />
+                  <Tooltip formatter={(v: number) => [`${v}%`, 'Utilisation']} />
+                  <Bar dataKey="utilisation_rate" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                    {utilisation.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           ) : <p className="text-sm text-gray-400 text-center py-12">No data yet</p>}
         </div>
 
@@ -110,16 +105,18 @@ export default function AdminAnalyticsPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Borrowed assets by category</h2>
           {pieData?.length ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90}
-                  dataKey="value" nameKey="name" paddingAngle={3}>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            <ChartContainer height={240}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90}
+                    dataKey="value" nameKey="name" paddingAngle={3}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           ) : <p className="text-sm text-gray-400 text-center py-12">Nothing borrowed yet</p>}
         </div>
       </div>
@@ -190,20 +187,27 @@ export default function AdminAnalyticsPage() {
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Activity log</h2>
         <div className="space-y-0">
+          {!activity?.length ? (
+            <p className="text-sm text-gray-400 py-6 text-center">No activity yet</p>
+          ) : null}
           {activity?.map((log, i) => (
             <div key={log.id} className={`flex items-start gap-4 py-3 ${i < activity.length - 1 ? 'border-b border-gray-50' : ''}`}>
               <span className={`mt-0.5 text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${actionColors[log.action] ?? 'bg-gray-100 text-gray-600'}`}>
-                {actionLabels[log.action] ?? log.action}
+                {log.action_label}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800">
                   <span className="font-medium">{log.actor_name}</span>
-                  {' · '}
-                  <span className="text-gray-500">{log.target_type} #{log.target_id.slice(0, 8)}</span>
+                  {log.target_label ? (
+                    <>
+                      {' · '}
+                      <span className="text-gray-500">{log.target_label}</span>
+                    </>
+                  ) : null}
                 </p>
-                {Object.keys(log.metadata).length > 0 && (
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">{JSON.stringify(log.metadata)}</p>
-                )}
+                {log.summary ? (
+                  <p className="text-xs text-gray-500 mt-0.5">{log.summary}</p>
+                ) : null}
               </div>
               <span className="text-xs text-gray-400 flex-shrink-0">{formatDateTime(log.created_at)}</span>
             </div>

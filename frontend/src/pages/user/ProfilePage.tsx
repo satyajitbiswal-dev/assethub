@@ -10,7 +10,9 @@ import {
   useChangePasswordMutation,
 } from '@/features/auth/authApi'
 import toast from 'react-hot-toast'
-import { User, Lock, Eye, EyeOff, X, KeyRound, Info } from 'lucide-react'
+import { getApiErrorMessage } from '@/lib/utils'
+import { User, Lock, X, KeyRound, Info } from 'lucide-react'
+import PasswordField from '@/components/shared/PasswordField'
 
 const TEMP_PW_KEY = 'assethub_used_temp_pw'
 
@@ -38,40 +40,6 @@ const Field = ({
   </div>
 )
 
-function PasswordField({
-  label,
-  error,
-  required,
-  ...inputProps
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string
-  error?: string
-  required?: boolean
-}) {
-  const [show, setShow] = useState(false)
-  // label / error / required are destructured above, so ...inputProps is clean
-  // and will NOT forward those props to <input>
-  return (
-    <Field label={label} error={error} required={required}>
-      <div className="relative">
-        <input
-          {...inputProps}
-          type={show ? 'text' : 'password'}
-          className={inputCls + ' pr-10'}
-        />
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => setShow((v) => !v)}
-          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-    </Field>
-  )
-}
-
 const profileSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
@@ -85,7 +53,7 @@ const pwSchema = z
   .object({
     old_password: z.string().min(1, 'Old password is required'),
     new_password: z.string().min(8, 'Minimum 8 characters'),
-    confirm_password: z.string(),
+    confirm_password: z.string().min(1, 'Please confirm your password'),
   })
   .refine((d) => d.new_password === d.confirm_password, {
     message: 'Passwords do not match',
@@ -99,7 +67,12 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<PwData>({ resolver: zodResolver(pwSchema) })
+  } = useForm<PwData>({
+    resolver: zodResolver(pwSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+    defaultValues: { old_password: '', new_password: '', confirm_password: '' },
+  })
 
   const onSubmit = async (data: PwData) => {
     try {
@@ -111,13 +84,7 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
       onSuccess()
       onClose()
     } catch (err: unknown) {
-      const msg =
-        (err as { data?: { old_password?: string[]; new_password?: string[]; detail?: string } })
-          ?.data?.old_password?.[0] ??
-        (err as { data?: { new_password?: string[]; detail?: string } })?.data?.new_password?.[0] ??
-        (err as { data?: { detail?: string } })?.data?.detail ??
-        'Failed to update password'
-      toast.error(msg)
+      toast.error(getApiErrorMessage(err, 'Failed to update password'))
     }
   }
 
@@ -145,6 +112,7 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
           <PasswordField
             label="Old Password"
             required
+            autoComplete="current-password"
             placeholder="••••••••"
             error={errors.old_password?.message}
             {...register('old_password')}
@@ -152,6 +120,7 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
           <PasswordField
             label="New Password"
             required
+            autoComplete="new-password"
             placeholder="••••••••"
             error={errors.new_password?.message}
             {...register('new_password')}
@@ -159,6 +128,7 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
           <PasswordField
             label="Confirm New Password"
             required
+            autoComplete="new-password"
             placeholder="••••••••"
             error={errors.confirm_password?.message}
             {...register('confirm_password')}
@@ -249,16 +219,11 @@ export default function ProfilePage() {
       })
       toast.success('Profile updated successfully')
     } catch (err: unknown) {
-      const body = (err as { data?: Record<string, string[] | string> })?.data
-      if (body?.enrollment_no) {
-        const msg = Array.isArray(body.enrollment_no) ? body.enrollment_no[0] : body.enrollment_no
-        setError('enrollment_no', { message: msg })
+      const body = (err as { data?: { errors?: Record<string, string[]> } })?.data?.errors
+      if (body?.enrollment_no?.[0]) {
+        setError('enrollment_no', { message: body.enrollment_no[0] })
       }
-      toast.error(
-        (Array.isArray(body?.enrollment_no) ? body.enrollment_no[0] : null) ??
-          (typeof body?.detail === 'string' ? body.detail : null) ??
-          'Failed to update profile',
-      )
+      toast.error(getApiErrorMessage(err, 'Failed to update profile'))
     }
   }
 
