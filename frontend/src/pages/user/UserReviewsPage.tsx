@@ -236,9 +236,13 @@ export default function UserReviewsPage() {
   const hasReviews = (myReviews?.length ?? 0) > 0
 
   const handleClearAll = async () => {
-    await clearMyReviews()
-    setShowClearDialog(false)
-    toast.success('All reviews cleared')
+    try {
+      await clearMyReviews().unwrap()
+      setShowClearDialog(false)
+      toast.success('All reviews cleared')
+    } catch {
+      toast.error('Failed to clear reviews')
+    }
   }
 
   const isLoading = reviewsLoading || bookingsLoading

@@ -39,8 +39,13 @@ export const feedbackApi = baseApi.injectEndpoints({
         Array.isArray(res) ? res : res.results,
       providesTags: ['Feedback'],
     }),
-    getActiveCampaign: build.query<FeedbackCampaign, void>({
-      query: () => '/feedback/campaigns/active/',
+    getActiveCampaign: build.query<FeedbackCampaign | null, void>({
+      query: () => ({
+        url: '/feedback/campaigns/active/',
+        validateStatus: (response) => response.status === 200 || response.status === 404,
+      }),
+      transformResponse: (res: FeedbackCampaign | { detail?: string }) =>
+        'id' in res ? res : null,
       providesTags: ['Feedback'],
     }),
     createCampaign: build.mutation<FeedbackCampaign, { title: string; description?: string; is_active?: boolean }>({
@@ -67,8 +72,13 @@ export const feedbackApi = baseApi.injectEndpoints({
         Array.isArray(res) ? res : res.results,
       providesTags: ['Feedback'],
     }),
-    getMyResponse: build.query<FeedbackResponse, string>({
-      query: (campaignId) => `/feedback/responses/my/?campaign=${campaignId}`,
+    getMyResponse: build.query<FeedbackResponse | null, string>({
+      query: (campaignId) => ({
+        url: `/feedback/responses/my/?campaign=${campaignId}`,
+        validateStatus: (response) => response.status === 200 || response.status === 404,
+      }),
+      transformResponse: (res: FeedbackResponse | { detail?: string }) =>
+        'id' in res ? res : null,
       providesTags: ['Feedback'],
     }),
     submitResponse: build.mutation<FeedbackResponse, {
@@ -77,6 +87,14 @@ export const feedbackApi = baseApi.injectEndpoints({
       improvement_suggestions: string
     }>({
       query: (body) => ({ url: '/feedback/responses/', method: 'POST', body }),
+      async onQueryStarted({ campaign }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(feedbackApi.util.upsertQueryData('getMyResponse', campaign, data))
+        } catch {
+          // invalidation below handles failure
+        }
+      },
       invalidatesTags: ['Feedback'],
     }),
   }),

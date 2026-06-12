@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, Package, Bell } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { useAppSelector } from '@/app/hooks'
 import { useNotificationSocket } from '@/features/notifications/useNotificationSocket'
 import { useGetNotificationsQuery } from '@/features/notifications/notificationsApi'
 import Sidebar from './Sidebar'
@@ -11,8 +12,10 @@ export default function AppLayout() {
 
   const [mobileOpen, setMobileOpen]       = useState(false)
   const [collapsed,  setCollapsed]        = useState(false)
-  const { data: notifs } = useGetNotificationsQuery()
+  const { user } = useAppSelector((s) => s.auth)
+  const { data: notifs } = useGetNotificationsQuery(undefined, { pollingInterval: 30000 })
   const unread = notifs?.unread_count ?? 0
+  const notificationsPath = user?.role === 'admin' ? '/admin/notifications' : '/notifications'
 
   // Close mobile sidebar on window resize to ≥ md breakpoint
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function AppLayout() {
 
           {/* Notification bell shortcut */}
           <NavLink
-            to="/notifications"
+            to={notificationsPath}
             className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Bell className="w-5 h-5 text-gray-600" />

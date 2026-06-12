@@ -7,6 +7,6 @@ router.register("reviews", ReviewViewSet, basename="review")
 router.register("", BookingViewSet, basename="booking")
 
 urlpatterns = [
-    path("", include(router.urls)),
     path("audit-logs/", AuditLogListView.as_view(), name="audit-logs"),
+    path("", include(router.urls)),
 ]

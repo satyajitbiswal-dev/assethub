@@ -9,6 +9,7 @@ from .models import Booking, AuditLog, Review
 from .serializers import BookingSerializer, BookingCreateSerializer, RejectSerializer, AuditLogSerializer, ReviewSerializer
 from apps.core.permissions import IsAdminUser, IsOwnerOrAdmin
 from apps.notifications.utils import notify_user
+from .reminders import send_overdue_reminder
 from django.db.models import Count
 
 
@@ -35,10 +36,22 @@ class BookingViewSet(viewsets.ModelViewSet):
             return BookingCreateSerializer
         return BookingSerializer
 
+    ADMIN_ACTIONS = ("approve", "reject", "issue", "asset_return", "remind_overdue")
+
     def get_permissions(self):
-        if self.action in ["update", "partial_update", "destroy"]:
+        if self.action in ("update", "partial_update", "destroy", *self.ADMIN_ACTIONS):
             return [IsAdminUser()]
+        if self.action == "cancel":
+            return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
         return [permissions.IsAuthenticated()]
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        if instance.status == Booking.Status.ISSUED:
+            asset = instance.asset
+            asset.available_qty += instance.quantity
+            asset.save(update_fields=["available_qty"])
+        instance.delete()
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -54,10 +67,10 @@ class BookingViewSet(viewsets.ModelViewSet):
                 body=f"{booking.user.full_name} requested {booking.quantity}x {booking.asset.name}",
             )
             send_email_task.delay(
-            subject="New booking request",
-            message=f"{booking.user.full_name} requested {booking.quantity}x {booking.asset.name}",
-            recipient_list=[admin.email],
-        )
+                subject="New booking request",
+                message=f"{booking.user.full_name} requested {booking.quantity}x {booking.asset.name}",
+                recipient_list=[admin.email],
+            )
 
 
     def create(self, request, *args, **kwargs):
@@ -179,6 +192,23 @@ class BookingViewSet(viewsets.ModelViewSet):
         AuditLog.log(request.user, "asset_returned", booking)
         return Response(BookingSerializer(booking).data)
 
+    @action(detail=True, methods=["post"], url_path="remind-overdue", permission_classes=[IsAdminUser])
+    def remind_overdue(self, request, pk=None):
+        booking = self.get_object()
+        today = timezone.now().date()
+        if booking.status != Booking.Status.ISSUED:
+            return Response(
+                {"success": False, "message": "Only issued bookings can receive overdue reminders."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if booking.end_date >= today:
+            return Response(
+                {"success": False, "message": "This booking is not overdue yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        send_overdue_reminder(booking)
+        return Response({"success": True, "message": "Reminder sent to user."})
+
 
 class AuditLogListView(generics.ListAPIView):
     serializer_class = AuditLogSerializer
@@ -192,7 +222,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = None
  
     def get_permissions(self):
-        if self.action in ("by_asset", "summary", "mark_seen"):
+        if self.action in ("by_asset", "summary", "clear_by_asset"):
             return [IsAdminUser()]
         return [permissions.IsAuthenticated()]
  
@@ -235,5 +265,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def clear_mine(self, request):
         """User: delete all their own reviews."""
         deleted_count, _ = Review.objects.filter(user=request.user).delete()
+        return Response({"success": True, "deleted": deleted_count})
+
+    @action(detail=False, methods=["delete"], url_path=r"by-asset/(?P<asset_id>[^/.]+)/clear")
+    def clear_by_asset(self, request, asset_id=None):
+        """Admin: delete all reviews for an asset."""
+        deleted_count, _ = Review.objects.filter(asset__id=asset_id).delete()
         return Response({"success": True, "deleted": deleted_count})
  

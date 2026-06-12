@@ -7,7 +7,7 @@ import { useLoginMutation, useForgotPasswordMutation } from '@/features/auth/aut
 import { setAuth } from '@/features/auth/authSlice'
 import { useAppDispatch } from '@/app/hooks'
 import toast from 'react-hot-toast'
-import { Package, X, Mail } from 'lucide-react'
+import { Package, X, Mail, Eye, EyeOff } from 'lucide-react'
 
 // ─── Login form schema ────────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -36,7 +36,6 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   const onSubmit = async (data: ForgotData) => {
     try {
       await forgotPassword(data).unwrap()
-      localStorage.setItem('assethub_used_temp_pw', 'true')
       setSent(true)
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -127,6 +126,7 @@ export default function LoginPage() {
   const dispatch = useAppDispatch()
   const [login, { isLoading }] = useLoginMutation()
   const [showForgot, setShowForgot] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -188,12 +188,24 @@ export default function LoginPage() {
                   Forgot password?
                 </button>
               </div>
-              <input
-                {...register('password')}
-                type="password"
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
+              <div className="relative">
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
               )}

@@ -58,7 +58,7 @@ function AssetModal({ asset, onClose }: { asset?: Asset; onClose: () => void }) 
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Total quantity *</label>
-              <input {...register('total_qty', { required: true, min: 1 })} type="number" min={1} className={inputCls} />
+              <input {...register('total_qty', { required: true, min: 1, valueAsNumber: true })} type="number" min={1} className={inputCls} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
@@ -141,7 +141,7 @@ export default function AdminAssetsPage() {
           className="w-full max-w-sm pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
       </div>
 
-      {isLoading ? <LoadingSpinner /> : (
+      {isLoading && !data ? <LoadingSpinner /> : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">

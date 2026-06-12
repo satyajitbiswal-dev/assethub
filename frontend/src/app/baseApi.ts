@@ -11,26 +11,50 @@ const rawBaseQuery = fetchBaseQuery({
   },
 })
 
-// Auto-refresh: if 401, try refresh token once then retry
+let refreshPromise: Promise<boolean> | null = null
+
+async function tryRefreshToken(
+  api: Parameters<BaseQueryFn>[1],
+  extraOptions: Parameters<BaseQueryFn>[2],
+): Promise<boolean> {
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = (async () => {
+    const refreshToken = (api.getState() as RootState).auth.refreshToken
+    if (!refreshToken) return false
+
+    const refreshResult = await rawBaseQuery(
+      { url: '/auth/token/refresh/', method: 'POST', body: { refresh: refreshToken } },
+      api,
+      extraOptions,
+    )
+
+    if (!refreshResult.data) return false
+
+    const data = refreshResult.data as { access: string; refresh?: string }
+    api.dispatch(
+      setCredentials({
+        accessToken: data.access,
+        refreshToken: data.refresh,
+      }),
+    )
+    return true
+  })().finally(() => {
+    refreshPromise = null
+  })
+
+  return refreshPromise
+}
+
+// Auto-refresh: if 401, try refresh token once then retry (single in-flight refresh)
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
   async (args, api, extraOptions) => {
     let result = await rawBaseQuery(args, api, extraOptions)
 
     if (result.error && result.error.status === 401) {
-      const refreshToken = (api.getState() as RootState).auth.refreshToken
-      if (refreshToken) {
-        const refreshResult = await rawBaseQuery(
-          { url: '/auth/token/refresh/', method: 'POST', body: { refresh: refreshToken } },
-          api,
-          extraOptions,
-        )
-        if (refreshResult.data) {
-          const data = refreshResult.data as { access: string }
-          api.dispatch(setCredentials({ accessToken: data.access }))
-          result = await rawBaseQuery(args, api, extraOptions)
-        } else {
-          api.dispatch(logout())
-        }
+      const refreshed = await tryRefreshToken(api, extraOptions)
+      if (refreshed) {
+        result = await rawBaseQuery(args, api, extraOptions)
       } else {
         api.dispatch(logout())
       }

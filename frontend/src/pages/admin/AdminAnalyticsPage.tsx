@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   useGetSummaryQuery,
   useGetTopAssetsQuery,
@@ -5,6 +6,9 @@ import {
   useGetOverdueBookingsQuery,
   useGetRecentActivityQuery,
 } from '@/features/analytics/analyticsApi'
+import { useSendOverdueReminderMutation } from '@/features/bookings/bookingsApi'
+import toast from 'react-hot-toast'
+import { getApiErrorMessage } from '@/lib/utils'
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
@@ -14,7 +18,7 @@ import {
 } from 'recharts'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import ChartContainer from '@/components/shared/ChartContainer'
-import { AlertTriangle, TrendingUp, Package, BookOpen, Clock, RotateCcw } from 'lucide-react'
+import { AlertTriangle, TrendingUp, Package, BookOpen, Clock, RotateCcw, Bell } from 'lucide-react'
 
 const COLORS = ['#1D9E75', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -54,6 +58,20 @@ export default function AdminAnalyticsPage() {
   const { data: utilisation } = useGetUtilisationQuery()
   const { data: overdue }    = useGetOverdueBookingsQuery()
   const { data: activity }   = useGetRecentActivityQuery()
+  const [sendReminder] = useSendOverdueReminderMutation()
+  const [remindingId, setRemindingId] = useState<string | null>(null)
+
+  const handleRemind = async (bookingId: string, userName?: string) => {
+    setRemindingId(bookingId)
+    try {
+      const res = await sendReminder(bookingId).unwrap()
+      toast.success(res.message || `Reminder sent to ${userName ?? 'user'}`)
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Failed to send reminder'))
+    } finally {
+      setRemindingId(null)
+    }
+  }
 
   if (isLoading && !summary) return <LoadingSpinner />
 
@@ -169,6 +187,15 @@ export default function AdminAnalyticsPage() {
                     <p className="text-xs text-gray-500">{b.user_detail?.full_name} · {b.user_detail?.department}</p>
                     <p className="text-xs text-danger mt-0.5">Due {formatDate(b.end_date)}</p>
                   </div>
+                  <button
+                    type="button"
+                    title="Send reminder (in-app + email)"
+                    disabled={remindingId === b.id}
+                    onClick={() => handleRemind(b.id, b.user_detail?.full_name)}
+                    className="p-2 rounded-lg text-primary hover:bg-primary-light transition-colors disabled:opacity-50 flex-shrink-0"
+                  >
+                    <Bell className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>

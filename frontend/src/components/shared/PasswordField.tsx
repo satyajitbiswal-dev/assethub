@@ -1,6 +1,12 @@
-import { forwardRef, useState } from 'react'
+import { forwardRef, useState, useCallback } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+function assignRef<T>(ref: React.Ref<T> | undefined, node: T | null) {
+  if (!ref) return
+  if (typeof ref === 'function') ref(node)
+  else (ref as React.MutableRefObject<T | null>).current = node
+}
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors'
@@ -35,12 +41,26 @@ type PasswordFieldProps = {
 const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   function PasswordField({ label, error, required, className, ...inputProps }, ref) {
     const [show, setShow] = useState(false)
+    const { ref: fieldRef, value, ...rest } = inputProps as PasswordFieldProps & {
+      ref?: React.Ref<HTMLInputElement>
+      value?: string
+    }
+
+    const setRefs = useCallback(
+      (node: HTMLInputElement | null) => {
+        assignRef(ref, node)
+        assignRef(fieldRef, node)
+      },
+      [ref, fieldRef],
+    )
+
     return (
       <Field label={label} error={error} required={required}>
         <div className="relative">
           <input
-            ref={ref}
-            {...inputProps}
+            {...rest}
+            ref={setRefs}
+            value={value ?? ''}
             type={show ? 'text' : 'password'}
             className={cn(inputCls, 'pr-10', className)}
           />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Asset } from '@/types'
 import { X, MapPin, Package, Tag, Wrench, Download, QrCode } from 'lucide-react'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -27,14 +27,14 @@ function QrSection({ assetId, assetName }: { assetId: string; assetName: string 
     }
   }
 
-  // Auto-download when URL becomes available after first fetch
-  if (qrUrl && fetch) {
+  useEffect(() => {
+    if (!qrUrl || !fetch) return
     const a = document.createElement('a')
     a.href = qrUrl
     a.download = `QR-${assetName.replace(/\s+/g, '_')}.png`
     a.click()
-    setFetch(false) // reset so we don't loop
-  }
+    setFetch(false)
+  }, [qrUrl, fetch, assetName])
 
   return (
     <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">

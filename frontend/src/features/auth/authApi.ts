@@ -1,5 +1,6 @@
 import { baseApi } from '@/app/baseApi'
 import { LoginResponse, User } from '@/types'
+import { updateUser } from './authSlice'
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -21,9 +22,8 @@ export const authApi = baseApi.injectEndpoints({
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled
-          dispatch(
-            authApi.util.updateQueryData('getMe', undefined, () => data),
-          )
+          dispatch(authApi.util.updateQueryData('getMe', undefined, () => data))
+          dispatch(updateUser(data))
         } catch {
           /* handled by caller */
         }

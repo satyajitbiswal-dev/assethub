@@ -28,6 +28,7 @@ export default function FeedbackPage() {
   const {
     data: myResponse,
     isLoading: responseLoading,
+    isFetching: responseFetching,
   } = useGetMyResponseQuery(campaign?.id ?? '', {
     skip: !campaign?.id,
   })
@@ -54,7 +55,9 @@ export default function FeedbackPage() {
     }
   }
 
-  if (campaignLoading || responseLoading) return <LoadingSpinner />
+  if (campaignLoading || (campaign?.id && (responseLoading || (responseFetching && myResponse === undefined)))) {
+    return <LoadingSpinner />
+  }
 
   // ── No active campaign ─────────────────────────────────────────────────────
   if (!campaign) {

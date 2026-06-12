@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.db.models import Count, Q, Sum, F
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from apps.core.permissions import IsAdminUser
@@ -36,10 +37,21 @@ def summary(request):
     })
 
 
+def _parse_limit(request, default=5, maximum=50):
+    raw = request.query_params.get("limit", default)
+    try:
+        limit = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return max(1, min(limit, maximum))
+
+
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def top_assets(request):
-    limit = int(request.query_params.get("limit", 5))
+    limit = _parse_limit(request, default=5)
+    if limit is None:
+        return Response({"detail": "Invalid limit parameter."}, status=status.HTTP_400_BAD_REQUEST)
     top = (
         Asset.objects.annotate(booking_count=Count("bookings", filter=Q(bookings__status__in=["issued", "returned"])))
         .order_by("-booking_count")[:limit]
@@ -81,6 +93,8 @@ def utilisation_by_category(request):
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def recent_activity(request):
-    limit = int(request.query_params.get("limit", 10))
+    limit = _parse_limit(request, default=10)
+    if limit is None:
+        return Response({"detail": "Invalid limit parameter."}, status=status.HTTP_400_BAD_REQUEST)
     logs = AuditLog.objects.select_related("actor")[:limit]
     return Response(AuditLogSerializer(logs, many=True).data)

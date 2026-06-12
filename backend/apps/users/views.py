@@ -9,8 +9,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, ChangePasswordSerializer
 from apps.core.permissions import IsAdminUser
@@ -28,6 +28,25 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.payload.get("user_id")
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            raise ValidationError({"message": "Invalid token."})
+        if not user.is_active:
+            raise ValidationError(
+                {"message": "Your account has been blocked. Contact your administrator."}
+            )
+        return super().validate(attrs)
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    serializer_class = CustomTokenRefreshSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -131,8 +150,6 @@ class ForgotPasswordView(APIView):
             ),
             recipient_list=[user.email],
         )
-
-        return Response(GENERIC_OK)
 
         return Response(GENERIC_OK)
 

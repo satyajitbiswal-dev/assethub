@@ -43,6 +43,10 @@ export const bookingsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/bookings/${id}/return/`, method: 'PATCH' }),
       invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, ...bookingListTags],
     }),
+    sendOverdueReminder: build.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({ url: `/bookings/${id}/remind-overdue/`, method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
   }),
 })
 
@@ -55,4 +59,5 @@ export const {
   useRejectBookingMutation,
   useIssueBookingMutation,
   useReturnBookingMutation,
+  useSendOverdueReminderMutation,
 } = bookingsApi

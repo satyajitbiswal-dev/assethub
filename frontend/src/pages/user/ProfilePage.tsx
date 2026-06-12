@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAppDispatch } from '@/app/hooks'
@@ -64,7 +64,7 @@ type PwData = z.infer<typeof pwSchema>
 function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [changePassword, { isLoading }] = useChangePasswordMutation()
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<PwData>({
@@ -108,30 +108,48 @@ function ChangePasswordDialog({ onClose, onSuccess }: { onClose: () => void; onS
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <PasswordField
-            label="Old Password"
-            required
-            autoComplete="current-password"
-            placeholder="••••••••"
-            error={errors.old_password?.message}
-            {...register('old_password')}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <Controller
+            name="old_password"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                label="Old Password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                error={errors.old_password?.message}
+                {...field}
+              />
+            )}
           />
-          <PasswordField
-            label="New Password"
-            required
-            autoComplete="new-password"
-            placeholder="••••••••"
-            error={errors.new_password?.message}
-            {...register('new_password')}
+          <Controller
+            name="new_password"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                label="New Password"
+                required
+                autoComplete="new-password"
+                placeholder="••••••••"
+                error={errors.new_password?.message}
+                {...field}
+              />
+            )}
           />
-          <PasswordField
-            label="Confirm New Password"
-            required
-            autoComplete="new-password"
-            placeholder="••••••••"
-            error={errors.confirm_password?.message}
-            {...register('confirm_password')}
+          <Controller
+            name="confirm_password"
+            control={control}
+            render={({ field }) => (
+              <PasswordField
+                label="Confirm New Password"
+                required
+                autoComplete="new-password"
+                placeholder="••••••••"
+                error={errors.confirm_password?.message}
+                {...field}
+              />
+            )}
           />
 
           <div className="flex gap-3 pt-2">

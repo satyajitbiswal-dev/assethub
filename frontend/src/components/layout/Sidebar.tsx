@@ -12,13 +12,13 @@ import { useGetMyReviewsQuery } from '@/features/reviews/reviewApi'
 import { useGetBookingsQuery } from '@/features/bookings/bookingsApi'
 import { cn } from '@/lib/utils'
 
-const buildAdminLinks = (unread: number) => [
+const buildAdminLinks = (unread: number, pendingBookings: number) => [
   { to: '/admin/dashboard',  icon: LayoutDashboard,   label: 'Dashboard',     badge: 0 },
   { to: '/admin/assets',     icon: Package,           label: 'Assets',        badge: 0 },
-  { to: '/admin/bookings',   icon: BookOpen,          label: 'Bookings',      badge: 0 },
+  { to: '/admin/bookings',   icon: BookOpen,          label: 'Bookings',      badge: pendingBookings },
   { to: '/admin/analytics',  icon: BarChart2,         label: 'Analytics',     badge: 0 },
   { to: '/admin/users',      icon: Shield,            label: 'Users',         badge: 0 },
-  { to: '/notifications',    icon: Bell,              label: 'Notifications', badge: unread },
+  { to: '/admin/notifications', icon: Bell,           label: 'Notifications', badge: unread },
   { to: '/admin/feedback',   icon: MessageSquarePlus, label: 'Feedback',      badge: 0 },
   { to: '/admin/scan',       icon: ScanLine,          label: 'QR Scanner',    badge: 0 },
 ]
@@ -37,12 +37,17 @@ export default function Sidebar({ mobileOpen, onMobileClose, collapsed, onToggle
   const navigate    = useNavigate()
   const { user, refreshToken } = useAppSelector((s) => s.auth)
   const [logoutApi] = useLogoutMutation()
-  const { data: notifs } = useGetNotificationsQuery()
-  const { data: myReviews } = useGetMyReviewsQuery()
-  const { data: returnedBookings } = useGetBookingsQuery({ status: 'returned' })
-
-  const unread  = notifs?.unread_count ?? 0
   const isAdmin = user?.role === 'admin'
+  const { data: notifs } = useGetNotificationsQuery()
+  const { data: myReviews } = useGetMyReviewsQuery(undefined, { skip: isAdmin })
+  const { data: returnedBookings } = useGetBookingsQuery({ status: 'returned' }, { skip: isAdmin })
+  const { data: pendingBookings } = useGetBookingsQuery(
+    { status: 'pending' },
+    { skip: !isAdmin, pollingInterval: 15000 },
+  )
+
+  const unread = notifs?.unread_count ?? 0
+  const pendingCount = pendingBookings?.count ?? 0
 
   const reviewedBookingIds = new Set((myReviews ?? []).map((r) => r.booking))
   const pendingReviewCount = (returnedBookings?.results ?? []).filter(
@@ -59,7 +64,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, collapsed, onToggle
     { to: '/feedback',      icon: MessageSquarePlus,  label: 'Feedback',      badge: 0 },
   ]
 
-  const links = isAdmin ? buildAdminLinks(unread) : userLinks
+  const links = isAdmin ? buildAdminLinks(unread, pendingCount) : userLinks
 
   const handleLogout = async () => {
     if (refreshToken) await logoutApi({ refresh: refreshToken }).catch(() => {})

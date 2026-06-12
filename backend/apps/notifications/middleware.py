@@ -11,7 +11,8 @@ from rest_framework_simplejwt.tokens import AccessToken
 def _get_user(user_id):
     User = get_user_model()
     try:
-        return User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
+        return user if user.is_active else AnonymousUser()
     except User.DoesNotExist:
         return AnonymousUser()
 

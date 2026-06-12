@@ -25,6 +25,7 @@ import AdminAnalyticsPage from '@/pages/admin/AdminAnalyticsPage'
 import AdminQrScannerPage from '@/pages/admin/AdminQrScannerPage'
 
 import NotificationsPage from '@/pages/NotificationsPage'
+import NotFoundRedirect from '@/components/shared/NotFoundRedirect'
 
 export default function App() {
   return (
@@ -75,7 +76,7 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
     </BrowserRouter>
   )

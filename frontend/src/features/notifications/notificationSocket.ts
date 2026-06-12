@@ -23,7 +23,8 @@ function patchNotifications(updater: (draft: NotificationsResponse) => void) {
 }
 
 function refreshOperationalData() {
-  store.dispatch(baseApi.util.invalidateTags(['Booking', 'Analytics', 'Asset', 'Notification']))
+  // Keep Notification cache from websocket patch; refetch operational lists only.
+  store.dispatch(baseApi.util.invalidateTags(['Booking', 'Analytics', 'Asset']))
 }
 
 function handleMessage(data: WsMessage) {
@@ -68,6 +69,12 @@ export function connectNotificationSocket(token: string): WebSocket {
   const ws = new WebSocket(
     `${protocol}//${window.location.host}/ws/notifications/?token=${encodeURIComponent(token)}`,
   )
-  ws.onmessage = (event) => handleMessage(JSON.parse(event.data))
+  ws.onmessage = (event) => {
+    try {
+      handleMessage(JSON.parse(event.data))
+    } catch {
+      // ignore malformed frames so the socket keeps working
+    }
+  }
   return ws
 }

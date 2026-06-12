@@ -8,14 +8,28 @@ interface AuthState {
   isAuthenticated: boolean
 }
 
-const stored = localStorage.getItem('auth')
-const initial: AuthState = stored
-  ? JSON.parse(stored)
-  : { user: null, accessToken: null, refreshToken: null, isAuthenticated: false }
+function loadAuthState(): AuthState {
+  const empty: AuthState = {
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+  }
+  try {
+    const stored = localStorage.getItem('auth')
+    if (!stored) return empty
+    const parsed = JSON.parse(stored) as AuthState
+    if (parsed?.isAuthenticated && parsed?.accessToken) return parsed
+    return empty
+  } catch {
+    localStorage.removeItem('auth')
+    return empty
+  }
+}
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: initial,
+  initialState: loadAuthState(),
   reducers: {
     setAuth(state, action: PayloadAction<{ user: User; access: string; refresh: string }>) {
       state.user = action.payload.user
@@ -24,8 +38,11 @@ const authSlice = createSlice({
       state.isAuthenticated = true
       localStorage.setItem('auth', JSON.stringify(state))
     },
-    setCredentials(state, action: PayloadAction<{ accessToken: string }>) {
+    setCredentials(state, action: PayloadAction<{ accessToken: string; refreshToken?: string }>) {
       state.accessToken = action.payload.accessToken
+      if (action.payload.refreshToken) {
+        state.refreshToken = action.payload.refreshToken
+      }
       localStorage.setItem('auth', JSON.stringify(state))
     },
     updateUser(state, action: PayloadAction<User>) {

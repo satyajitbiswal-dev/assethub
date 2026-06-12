@@ -9,7 +9,8 @@ import PageHeader from '@/components/shared/PageHeader'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import EmptyState from '@/components/shared/EmptyState'
 import { Bell, CheckCheck, Trash2, X } from 'lucide-react'
-import { formatDateTime, cn } from '@/lib/utils'
+import { formatDateTime, cn, getApiErrorMessage } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 function ClearAllDialog({
   count,
@@ -75,8 +76,29 @@ export default function NotificationsPage() {
   const totalCount = data?.results.length ?? 0
 
   const handleClearAll = async () => {
-    await clearAll().unwrap()
-    setShowClearDialog(false)
+    try {
+      await clearAll().unwrap()
+      setShowClearDialog(false)
+      toast.success('All notifications cleared')
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Failed to clear notifications'))
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead().unwrap()
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Failed to mark all as read'))
+    }
+  }
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markRead(id).unwrap()
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Failed to mark as read'))
+    }
   }
 
   return (
@@ -96,7 +118,7 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2">
             {data?.unread_count ? (
               <button
-                onClick={() => markAllRead()}
+                onClick={handleMarkAllRead}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <CheckCheck className="w-4 h-4" /> Mark all read
@@ -112,7 +134,7 @@ export default function NotificationsPage() {
         ) : undefined}
       />
     </div>
-      {isLoading ? (
+      {isLoading && !data ? (
         <LoadingSpinner />
       ) : !hasNotifications ? (
         <EmptyState icon={Bell} title="All caught up!" description="No notifications yet." />
@@ -121,7 +143,7 @@ export default function NotificationsPage() {
           {data!.results.map((n) => (
             <div
               key={n.id}
-              onClick={() => !n.is_read && markRead(n.id)}
+              onClick={() => !n.is_read && handleMarkRead(n.id)}
               className={cn(
                 'bg-white rounded-xl border p-4 cursor-pointer transition-all hover:border-gray-200',
                 n.is_read ? 'border-gray-100 opacity-70' : 'border-primary/20',

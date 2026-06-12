@@ -19,6 +19,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             "first_name", "last_name", "phone", "department",
         ]
 
+    def validate_email(self, value):
+        email = value.lower().strip()
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return email
+
     def validate_enrollment_no(self, value):
         if not value.isdigit():
             raise serializers.ValidationError("Enrollment number must contain only digits.")
