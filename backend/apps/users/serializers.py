@@ -75,6 +75,13 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Current password is incorrect.")
         return value
 
+    def validate(self, attrs):
+        if attrs["old_password"] == attrs["new_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "New password must be different from your current password."}
+            )
+        return attrs
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
  

@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from .models import Asset, Category
 from .serializers import AssetSerializer, AssetListSerializer, CategorySerializer
 from apps.core.permissions import IsAdminOrReadOnly, IsAdminUser
-from rest_framework.permissions import AllowAny
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -47,7 +46,7 @@ class AssetViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status="available", available_qty__gt=0)
         return qs
 
-    @action(detail=True, methods=["get"], url_path="qr", permission_classes=[AllowAny])
+    @action(detail=True, methods=["get"], url_path="qr")
     def qr_code(self, request, pk=None):
         """Generate and return a QR code PNG for this asset."""
         asset = self.get_object()

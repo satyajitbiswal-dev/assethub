@@ -73,12 +73,18 @@ class AuditLog(models.Model):
 
     @classmethod
     def log(cls, actor, action, target, metadata=None):
+        from .audit_utils import booking_audit_metadata
+
+        meta = dict(metadata or {})
+        if isinstance(target, Booking):
+            for key, value in booking_audit_metadata(target).items():
+                meta.setdefault(key, value)
         cls.objects.create(
             actor=actor,
             action=action,
             target_type=type(target).__name__,
             target_id=str(target.pk),
-            metadata=metadata or {},
+            metadata=meta,
         )
 
 

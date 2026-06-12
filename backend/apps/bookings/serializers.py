@@ -60,10 +60,28 @@ class RejectSerializer(serializers.Serializer):
 
 class AuditLogSerializer(serializers.ModelSerializer):
     actor_name = serializers.CharField(source="actor.full_name", read_only=True)
+    action_label = serializers.SerializerMethodField()
+    summary = serializers.SerializerMethodField()
+    target_label = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditLog
-        fields = ["id", "actor", "actor_name", "action", "target_type", "target_id", "metadata", "created_at"]
+        fields = [
+            "id", "actor_name", "action", "action_label",
+            "summary", "target_label", "created_at",
+        ]
+
+    def get_action_label(self, obj):
+        from .audit_utils import build_audit_display
+        return build_audit_display(obj)["action_label"]
+
+    def get_summary(self, obj):
+        from .audit_utils import build_audit_display
+        return build_audit_display(obj)["summary"]
+
+    def get_target_label(self, obj):
+        from .audit_utils import build_audit_display
+        return build_audit_display(obj)["target_label"]
 
 
 class ReviewSerializer(serializers.ModelSerializer):

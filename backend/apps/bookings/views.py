@@ -43,12 +43,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def perform_create(self, serializer):
         booking = serializer.save()
-        AuditLog.log(
-            actor=self.request.user,
-            action="booking_created",
-            target=booking,
-            metadata={"asset": str(booking.asset.id), "quantity": booking.quantity},
-        )
+        AuditLog.log(self.request.user, "booking_created", booking)
         # Notify admins
         from django.contrib.auth import get_user_model
         User = get_user_model()
@@ -157,7 +152,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking.status = Booking.Status.ISSUED
         booking.issued_at = timezone.now()
         booking.save()
-        AuditLog.log(request.user, "asset_issued", booking, {"qty": booking.quantity})
+        AuditLog.log(request.user, "asset_issued", booking)
         notify_user(booking.user, "Asset issued", f"{booking.asset.name} has been issued to you.")
         send_email_task.delay(
             subject="Asset issued",
